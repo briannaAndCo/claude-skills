@@ -9,7 +9,7 @@
     {
       "name": "claude-skills",
       "description": "A collection of custom Claude Code skills including project management with session tracking, time logging, and stream dependency management",
-      "source": ".",
+      "source": "./plugins/claude-skills",
       "category": "productivity"
     }
   ]

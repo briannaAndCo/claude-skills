@@ -1,22 +1,39 @@
 # claude-skills
 
-A collection of custom [Claude Code](https://claude.ai/claude-code) skills.
+A collection of custom [Claude Code](https://claude.ai/claude-code) skills by briannaAndCo.
+
+## Install
+
+```
+claude plugin marketplace add briannaAndCo/claude-skills
+claude plugin install claude-skills@briannaandco-skills
+```
 
 ## Structure
 
 ```
 claude-skills/
 ├── .claude-plugin/
-│   └── plugin.json     # Plugin metadata
-└── skills/
-    └── <skill-name>/
-        └── SKILL.md    # Skill definition
+│   └── marketplace.json          # Marketplace manifest
+└── plugins/
+    └── claude-skills/
+        ├── .claude-plugin/
+        │   └── plugin.json       # Plugin metadata
+        └── skills/
+            └── <skill-name>/
+                └── SKILL.md      # Skill definition
 ```
+
+## Skills
+
+| Skill | Description |
+|-------|-------------|
+| `project-manager` | Manage projects and streams with session logging and time tracking |
 
 ## Adding a Skill
 
-1. Create a new directory under `skills/` with your skill name
-2. Add a `SKILL.md` file with the following frontmatter:
+1. Create a directory under `plugins/claude-skills/skills/`
+2. Add a `SKILL.md`:
 
 ```yaml
 ---
@@ -26,14 +43,4 @@ version: 1.0.0
 ---
 
 # Your Skill Title
-
-Describe what this skill does and how Claude should use it.
-```
-
-## Using This Plugin
-
-Install via Claude Code:
-
-```
-/install-plugin https://github.com/briannaAndCo/claude-skills
 ```
