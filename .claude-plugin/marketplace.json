@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "briannaandco-skills",
+  "description": "Custom Claude Code skills by briannaAndCo",
+  "owner": {
+    "name": "briannaAndCo"
+  },
+  "plugins": [
+    {
+      "name": "claude-skills",
+      "description": "A collection of custom Claude Code skills including project management with session tracking, time logging, and stream dependency management",
+      "source": ".",
+      "category": "productivity"
+    }
+  ]
+}
