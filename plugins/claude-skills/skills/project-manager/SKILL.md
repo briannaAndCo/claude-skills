@@ -1,7 +1,7 @@
 ---
 name: project-manager
-description: This skill should be used when the user asks to "open projects", "manage projects", "new project", "create project", "open a stream", "start a session", "log time", "track time", "project manager", "what projects do I have", "show my projects", or mentions working on an epic, story, ticket, or stream. Manages structured project and stream workspaces with session tracking and time logging.
-version: 1.0.0
+description: This skill should be used when the user asks to "open projects", "manage projects", "new project", "create project", "open a stream", "start a session", "log time", "track time", "project manager", "what projects do I have", "show my projects", "open tmux", "start parallel streams", "run streams in parallel", "set up tmux for project", "work on multiple streams", or mentions working on an epic, story, ticket, or stream. Manages structured project and stream workspaces with session tracking, time logging, and tmux-based parallel Claude instances.
+version: 1.1.0
 disable-model-invocation: true
 ---
 
@@ -137,6 +137,70 @@ See [references/time-tracking.md](references/time-tracking.md) for rounding rule
 ```
 
 See [references/file-formats.md](references/file-formats.md) for exact file formats.
+
+---
+
+## tmux Integration
+
+Each project gets a dedicated tmux session (`pm-<project-name>`) with one window per open stream. Each stream window runs its own independent `claude` instance.
+
+### Opening a Project in tmux
+
+When the user asks to open a project in tmux or work on streams in parallel, run:
+
+```bash
+project-tmux open <project-name>
+```
+
+If the script is not installed yet, tell the user to install it first:
+
+```bash
+cp ~/.claude/plugins/installed/claude-skills/skills/project-manager/scripts/project-tmux.sh ~/bin/project-tmux
+chmod +x ~/bin/project-tmux
+```
+
+See [references/tmux-setup.md](references/tmux-setup.md) for alias setup and status bar config.
+
+### Opening a Single Stream in tmux
+
+```bash
+project-tmux stream <project-name> <stream-name>
+```
+
+This:
+1. Creates the project tmux session if it doesn't exist
+2. Writes a `CLAUDE.md` into the stream directory with project/stream context
+3. Opens a new tmux window named after the stream
+4. Starts `claude` in that window — it reads `CLAUDE.md` automatically on launch
+
+### Running Parallel Streams
+
+When the user wants to work on multiple streams simultaneously:
+
+1. Identify which streams are currently unblocked (check `plan.md`)
+2. Suggest the streams that can run in parallel based on the dependency map
+3. Run:
+
+```bash
+project-tmux parallel <project-name> <stream1> <stream2> <stream3> ...
+```
+
+Each stream gets its own tmux window and Claude instance. The user switches between them with `Prefix + <window-number>`.
+
+**Example — opening Wave 4 streams in parallel:**
+```bash
+project-tmux parallel braindump-notes \
+  auto-append inline-editing paginated-scroll \
+  background-sync color-rotation hand-drawn-rendering
+```
+
+### Checking Active Sessions
+
+```bash
+project-tmux list     # list all active project sessions
+project-tmux attach <project-name>   # reconnect to a session
+project-tmux kill <project-name>     # end a session
+```
 
 ---
 
