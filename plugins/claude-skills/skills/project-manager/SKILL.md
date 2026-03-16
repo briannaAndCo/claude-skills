@@ -1,13 +1,24 @@
 ---
 name: project-manager
 description: This skill should be used when the user asks to "open projects", "manage projects", "new project", "create project", "open a stream", "start a session", "log time", "track time", "project manager", "what projects do I have", "show my projects", "open tmux", "start parallel streams", "run streams in parallel", "set up tmux for project", "work on multiple streams", or mentions working on an epic, story, ticket, or stream. Manages structured project and stream workspaces with session tracking, time logging, and tmux-based parallel Claude instances.
-version: 1.1.0
+version: 1.2.0
 disable-model-invocation: true
 ---
 
 # Project Manager
 
 Manages a structured workspace of projects (epics) and streams (stories/tickets) with session logging and time tracking.
+
+## Environment Assumption
+
+**Claude is always running inside a tmux session.** The user launches Claude via the `ct` alias (`tmux new-session -A -s claude`) or the `pt` alias (`project-tmux`). This means:
+
+- When opening a stream, always offer to open it in a **new tmux window** in the current session
+- When the user wants parallel work, open multiple tmux windows — one per stream — each with its own Claude instance
+- Never suggest running `tmux` as an optional step; it is the default environment
+- Use `pt` as the shorthand for `project-tmux` in all examples
+
+---
 
 ## Configuration
 
@@ -20,6 +31,8 @@ Check for a config file at `~/.claude-projects-config`:
 ```
 
 If it doesn't exist, use `~/projects` as the default root. If the user specifies a different location, create or update the config file.
+
+---
 
 ## Entry Point: Opening the Projects Workspace
 
@@ -43,7 +56,7 @@ Ask:
 3. Ask for initial planned streams (optional — can be added later)
 4. Create the project structure (see [File Structure](#file-structure))
 5. Populate `plan.md` with the objective, planned streams, and empty dependency/status table
-6. Confirm creation and ask if the user wants to open a stream now
+6. Confirm creation, then offer to open it in tmux: `pt open <project-name>`
 
 ---
 
@@ -53,10 +66,10 @@ Ask:
    - Objective
    - Stream list with statuses and blocking dependencies
 2. List streams and offer to:
-   - **Open an existing stream**
+   - **Open a stream** (opens a new tmux window with Claude)
+   - **Open parallel streams** (opens multiple windows at once)
    - **Create a new stream**
    - **View project-level tasks/hours**
-   - **Start a project-level session**
 
 ---
 
@@ -67,20 +80,56 @@ Ask:
 3. Ask which streams (if any) this stream is blocked by
 4. Create the stream directory with `plan.md`, `session.md`, `hours.md`
 5. Update the project's `plan.md` to add the new stream with `planned` status and its dependencies
-6. Confirm creation and ask if the user wants to start a session
+6. Offer to open it immediately: `pt stream <project-name> <stream-name>`
 
 ---
 
 ## Opening a Stream
 
+Opening a stream always means opening it in a new tmux window with its own Claude instance:
+
+```bash
+pt stream <project-name> <stream-name>
+```
+
+This:
+1. Writes a `CLAUDE.md` into the stream directory with project/stream context
+2. Opens a new tmux window named after the stream (colored uniquely in the status bar)
+3. Starts `claude` in that window — reads `CLAUDE.md` automatically on launch
+
+The Claude instance in that window is independent. The user switches to it with `Prefix + <window-number>`.
+
+Once inside a stream window, that Claude instance should:
 1. Display the stream's `plan.md` (objective, tasks, acceptance criteria)
-2. Show recent sessions from `session.md`
-3. Show total hours from `hours.md`
-4. Ask what the user wants to do:
-   - **Start a session** (begin active work)
-   - **Log time manually** (add past work)
+2. Show recent sessions from `session.md` and total from `hours.md`
+3. Ask what the user wants to do:
+   - **Start a session**
+   - **Log time manually**
    - **Update the plan**
    - **Mark stream complete**
+
+---
+
+## Running Parallel Streams
+
+When the user wants to work on multiple streams simultaneously:
+
+1. Read `plan.md` and identify which streams are `unblocked` or `in-progress`
+2. Present the unblocked streams and suggest a parallel grouping based on the dependency map
+3. Open them all at once:
+
+```bash
+pt parallel <project-name> <stream1> <stream2> <stream3> ...
+```
+
+Each stream gets its own colored tmux window and independent Claude instance. The user switches between them with `Prefix + <number>`.
+
+**Example — Wave 4 of continuous-notebook:**
+```bash
+pt parallel braindump-notes \
+  auto-append inline-editing paginated-scroll \
+  background-sync color-rotation hand-drawn-rendering
+```
 
 ---
 
@@ -99,7 +148,7 @@ Also update the project-level `session.md` with the same entry.
 
 ### Ending a Session
 
-When the user signals they're done (says "end session", "stop session", "done for now", "wrapping up"):
+When the user signals they're done (says "end session", "stop session", "done for now", "wrapping up", "save session"):
 
 1. Record end time
 2. Calculate duration — **round to nearest 15 minutes**
@@ -126,81 +175,33 @@ See [references/time-tracking.md](references/time-tracking.md) for rounding rule
 ```
 <projects-root>/
 └── <project-name>/
-    ├── plan.md           # Master plan: objective, streams, dependencies, statuses
-    ├── session.md        # Project-level session log (all streams combined)
-    ├── tasks.md          # All tasks logged across streams with time
+    ├── plan.md            # Master plan: objective, streams, dependencies, statuses
+    ├── session.md         # Project-level session log (all streams combined)
+    ├── tasks.md           # All tasks logged across streams with time
     └── streams/
         └── <stream-name>/
-            ├── plan.md   # Stream scope, tasks checklist, acceptance criteria
+            ├── CLAUDE.md  # Auto-generated context for Claude on window open
+            ├── plan.md    # Stream scope, tasks checklist, acceptance criteria
             ├── session.md # Stream-level session log
-            └── hours.md  # Time entries for this stream
+            └── hours.md   # Time entries for this stream
 ```
 
 See [references/file-formats.md](references/file-formats.md) for exact file formats.
 
 ---
 
-## tmux Integration
-
-Each project gets a dedicated tmux session (`pm-<project-name>`) with one window per open stream. Each stream window runs its own independent `claude` instance.
-
-### Opening a Project in tmux
-
-When the user asks to open a project in tmux or work on streams in parallel, run:
+## tmux Quick Reference
 
 ```bash
-project-tmux open <project-name>
+pt open     <project>               # open project overview window
+pt stream   <project> <stream>      # open stream in new window with Claude
+pt parallel <project> <s1> <s2>...  # open parallel streams
+pt attach   <project>               # reconnect to a session
+pt list                             # list active project sessions
+pt kill     <project>               # end a session
 ```
 
-If the script is not installed yet, tell the user to install it first:
-
-```bash
-cp ~/.claude/plugins/installed/claude-skills/skills/project-manager/scripts/project-tmux.sh ~/bin/project-tmux
-chmod +x ~/bin/project-tmux
-```
-
-See [references/tmux-setup.md](references/tmux-setup.md) for alias setup and status bar config.
-
-### Opening a Single Stream in tmux
-
-```bash
-project-tmux stream <project-name> <stream-name>
-```
-
-This:
-1. Creates the project tmux session if it doesn't exist
-2. Writes a `CLAUDE.md` into the stream directory with project/stream context
-3. Opens a new tmux window named after the stream
-4. Starts `claude` in that window — it reads `CLAUDE.md` automatically on launch
-
-### Running Parallel Streams
-
-When the user wants to work on multiple streams simultaneously:
-
-1. Identify which streams are currently unblocked (check `plan.md`)
-2. Suggest the streams that can run in parallel based on the dependency map
-3. Run:
-
-```bash
-project-tmux parallel <project-name> <stream1> <stream2> <stream3> ...
-```
-
-Each stream gets its own tmux window and Claude instance. The user switches between them with `Prefix + <window-number>`.
-
-**Example — opening Wave 4 streams in parallel:**
-```bash
-project-tmux parallel braindump-notes \
-  auto-append inline-editing paginated-scroll \
-  background-sync color-rotation hand-drawn-rendering
-```
-
-### Checking Active Sessions
-
-```bash
-project-tmux list     # list all active project sessions
-project-tmux attach <project-name>   # reconnect to a session
-project-tmux kill <project-name>     # end a session
-```
+See [references/tmux-setup.md](references/tmux-setup.md) for status bar config and tips.
 
 ---
 
