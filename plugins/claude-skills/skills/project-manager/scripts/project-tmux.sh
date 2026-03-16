@@ -24,6 +24,35 @@ cmd="${1:-help}"
 project="${2:-}"
 session_name="pm-${project}"
 
+# Color palette — one per stream window (cycles if more streams than colors)
+STREAM_COLORS=(
+  "colour39"   # sky blue
+  "colour82"   # bright green
+  "colour214"  # orange
+  "colour171"  # purple
+  "colour51"   # cyan
+  "colour196"  # red
+  "colour226"  # yellow
+  "colour198"  # pink
+)
+
+# Assign window color based on how many windows already exist in the session
+next_color() {
+  local count
+  count=$(tmux list-windows -t "$session_name" -F "#{window_index}" 2>/dev/null | wc -l | tr -d ' ')
+  echo "${STREAM_COLORS[$((count % ${#STREAM_COLORS[@]}))]}"
+}
+
+# Apply color to a window's status bar appearance
+color_window() {
+  local window="$1"
+  local color="$2"
+  # Inactive: colored text on dark background
+  tmux set-window-option -t "$session_name:$window" window-status-style         "fg=${color},bg=colour234,bold" 2>/dev/null || true
+  # Active: inverted — dark text on colored background
+  tmux set-window-option -t "$session_name:$window" window-status-current-style "fg=colour234,bg=${color},bold" 2>/dev/null || true
+}
+
 # Write a CLAUDE.md into a stream directory so Claude has instant context on start
 write_stream_context() {
   local project="$1"
@@ -51,10 +80,29 @@ open_project() {
   fi
   if ! tmux has-session -t "$session_name" 2>/dev/null; then
     tmux new-session -d -s "$session_name" -n "overview" -c "$project_dir"
-    # Show the master plan on open
+    # Color the overview window (grey/white — neutral)
+    tmux set-window-option -t "$session_name:overview" window-status-style         "fg=colour250,bg=colour234,bold" 2>/dev/null || true
+    tmux set-window-option -t "$session_name:overview" window-status-current-style "fg=colour234,bg=colour250,bold" 2>/dev/null || true
     tmux send-keys -t "$session_name:overview" "cat plan.md | less -R" Enter
   fi
   tmux attach-session -t "$session_name"
+}
+
+open_stream_window() {
+  local stream="$1"
+  local stream_dir="$PROJECTS_ROOT/$project/streams/$stream"
+  if [ ! -d "$stream_dir" ]; then
+    echo "Warning: stream not found, skipping: $stream_dir"
+    return 1
+  fi
+  write_stream_context "$project" "$stream"
+  if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep -qx "$stream"; then
+    local color
+    color=$(next_color)
+    tmux new-window -t "$session_name" -n "$stream" -c "$stream_dir"
+    color_window "$stream" "$color"
+    tmux send-keys -t "$session_name:$stream" "claude" Enter
+  fi
 }
 
 open_stream() {
@@ -64,17 +112,12 @@ open_stream() {
     echo "Stream not found: $stream_dir"
     exit 1
   fi
-  # Ensure project session exists
   if ! tmux has-session -t "$session_name" 2>/dev/null; then
     tmux new-session -d -s "$session_name" -n "overview" -c "$PROJECTS_ROOT/$project"
+    tmux set-window-option -t "$session_name:overview" window-status-style         "fg=colour250,bg=colour234,bold" 2>/dev/null || true
+    tmux set-window-option -t "$session_name:overview" window-status-current-style "fg=colour234,bg=colour250,bold" 2>/dev/null || true
   fi
-  # Write stream context CLAUDE.md
-  write_stream_context "$project" "$stream"
-  # Create stream window if it doesn't already exist
-  if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep -qx "$stream"; then
-    tmux new-window -t "$session_name" -n "$stream" -c "$stream_dir"
-    tmux send-keys -t "$session_name:$stream" "claude" Enter
-  fi
+  open_stream_window "$stream"
   tmux select-window -t "$session_name:$stream"
   tmux attach-session -t "$session_name"
 }
@@ -86,23 +129,14 @@ open_parallel() {
     echo "No streams specified."
     exit 1
   fi
-  # Ensure project session exists
   if ! tmux has-session -t "$session_name" 2>/dev/null; then
     tmux new-session -d -s "$session_name" -n "overview" -c "$PROJECTS_ROOT/$project"
+    tmux set-window-option -t "$session_name:overview" window-status-style         "fg=colour250,bg=colour234,bold" 2>/dev/null || true
+    tmux set-window-option -t "$session_name:overview" window-status-current-style "fg=colour234,bg=colour250,bold" 2>/dev/null || true
   fi
   for stream in "${streams[@]}"; do
-    local stream_dir="$PROJECTS_ROOT/$project/streams/$stream"
-    if [ ! -d "$stream_dir" ]; then
-      echo "Warning: stream not found, skipping: $stream_dir"
-      continue
-    fi
-    write_stream_context "$project" "$stream"
-    if ! tmux list-windows -t "$session_name" -F "#{window_name}" 2>/dev/null | grep -qx "$stream"; then
-      tmux new-window -t "$session_name" -n "$stream" -c "$stream_dir"
-      tmux send-keys -t "$session_name:$stream" "claude" Enter
-    fi
+    open_stream_window "$stream"
   done
-  # Focus first stream
   tmux select-window -t "$session_name:${streams[0]}"
   tmux attach-session -t "$session_name"
 }
@@ -135,6 +169,6 @@ case "$cmd" in
     echo "  project-tmux.sh parallel <project> <s1> <s2>...  Open parallel streams"
     echo "  project-tmux.sh attach   <project>               Attach to session"
     echo "  project-tmux.sh list                             List active sessions"
-    echo "  project-tmux.sh kill     <project>               Kill session"
+    echo "  project-tmux.sh kill                             Kill session"
     ;;
 esac
