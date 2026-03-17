@@ -29,6 +29,8 @@ claude-skills/
 | Skill | Description |
 |-------|-------------|
 | `project-manager` | Manage projects and streams with session logging and time tracking |
+| `review` | Review code against AC, best practices, edge conditions, and test coverage |
+| `create-pr` | Create a draft PR with Conventional Commits title and structured body |
 
 ## Adding a Skill
 
