@@ -1,7 +1,7 @@
 ---
 name: project-manager
 description: This skill should be used when the user asks to "open projects", "manage projects", "new project", "create project", "open a stream", "start a session", "log time", "track time", "project manager", "what projects do I have", "show my projects", "open tmux", "start parallel streams", "run streams in parallel", "set up tmux for project", "work on multiple streams", or mentions working on an epic, story, ticket, or stream. Manages structured project and stream workspaces with session tracking, time logging, and tmux-based parallel Claude instances.
-version: 1.3.0
+version: 1.4.0
 disable-model-invocation: true
 ---
 
@@ -24,10 +24,15 @@ Manages a structured workspace of projects (epics) and streams (stories/tickets)
 Read config with:
 
 ```bash
-cat ~/.claude-projects-config 2>/dev/null || echo '{"projects_root": "~/projects"}'
+cat ~/.claude-projects-config 2>/dev/null || echo '{"projects_root": "~/projects", "repos_root": "~/repos"}'
 ```
 
-Default `projects_root` is `~/projects`. If the user specifies a different location, write or update the config file.
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `projects_root` | `~/projects` | Where project plan/session/hours files live |
+| `repos_root` | `~/repos` | Where git repos and worktrees live |
+
+If the user specifies different locations, write or update the config file.
 
 ---
 
@@ -120,14 +125,22 @@ Run using the Bash tool:
 ~/bin/project-tmux stream <project> <stream>
 ```
 
-This writes `CLAUDE.md` into the stream directory, opens a new tmux window named after the stream, and starts `claude` in it.
+This will:
+1. Create a git branch `stream/<stream-name>` off `main` (if it doesn't exist)
+2. Create a git worktree at `$repos_root/<project>-<stream-name>` on that branch (if it doesn't exist)
+3. Write `CLAUDE.md` into the stream plan directory with worktree path and branch
+4. Open a new tmux window named after the stream, **starting in the worktree directory**
+5. Start `claude` in that window
 
 The Claude instance in that window is independent. The user switches to it with `Prefix + <window-number>`.
+
+**All code changes for a stream happen in the worktree on its branch.** Planning files (plan.md, session.md, hours.md) stay in the stream plan directory.
 
 Once inside a stream window, that Claude instance should:
 1. Read and display the stream's `plan.md` (objective, tasks, acceptance criteria)
 2. Show recent sessions from `session.md` and total hours from `hours.md`
-3. Ask what the user wants to do:
+3. Confirm the active branch and worktree path
+4. Ask what the user wants to do:
    - **Start a session**
    - **Log time manually**
    - **Update the plan**
@@ -141,7 +154,7 @@ Once inside a stream window, that Claude instance should:
 ~/bin/project-tmux parallel <project> <stream1> <stream2> ...
 ```
 
-Each stream gets its own tmux window and independent Claude instance.
+Each stream gets its own branch, worktree, tmux window, and independent Claude instance. The worktree setup happens automatically — no manual git commands needed.
 
 When the user says "parallel", read `plan.md`, show all unblocked/in-progress streams, and ask which ones to open together.
 
@@ -196,7 +209,14 @@ When the user says "end session", "stop session", "done for now", "wrapping up",
             ├── plan.md    # Stream scope, tasks checklist, acceptance criteria
             ├── session.md # Stream-level session log
             └── hours.md   # Time entries for this stream
+
+<repos-root>/
+├── <project-name>/           # Main git repo (always on main)
+└── <project-name>-<stream>/  # Git worktree for each open stream
+                               # on branch stream/<stream-name>
 ```
+
+Each stream's worktree is isolated — parallel streams never conflict on the filesystem.
 
 ---
 
