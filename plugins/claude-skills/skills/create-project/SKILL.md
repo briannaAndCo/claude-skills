@@ -1,0 +1,186 @@
+---
+name: create-project
+description: This skill should be used when the user asks to "create a project", "new project", "init project", "set up a project", "start a new project", "bootstrap project", or "initialize project". Creates a new project by setting up a git repo (or using an existing one) with an orphan meta branch containing structured planning files.
+version: 1.0.0
+---
+
+# Create Project
+
+Creates a new project — a git repo with an orphan `meta` branch containing planning and tracking files. Code lives on main/feature branches; planning state lives on `meta`.
+
+---
+
+## Flow
+
+### 1. Gather Information
+
+Ask the user for:
+
+1. **Repo path** (required) — where the project lives on disk. Can be an existing repo or a new directory.
+2. **Project name** (required) — human-readable name. Derive kebab-case slug from this for internal use.
+3. **Objective** (required) — one paragraph describing the project goal.
+4. **Initial streams** (optional) — list of streams to scaffold. For each stream ask:
+   - Stream name (kebab-case)
+   - Brief description
+   - Blocked by (other stream names, if any)
+5. **GitHub repo URL** (optional) — remote URL for syncing the meta branch.
+
+Ask these conversationally — don't dump a form. Start with repo path and name, then objective, then offer to add streams.
+
+### 2. Initialize Git
+
+If no git repo exists at the given path:
+
+```bash
+mkdir -p <repo-path>
+git init <repo-path>
+```
+
+If a repo already exists, use it as-is.
+
+### 3. Create the Orphan Meta Branch
+
+```bash
+cd <repo-path>
+ORIGINAL_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+git checkout --orphan meta
+git rm -rf --cached . 2>/dev/null || true
+```
+
+### 4. Write Planning Files
+
+Use the **Write tool** (not Bash) to create all planning files in the repo root on the meta branch.
+
+#### `plan.md`
+
+Use the Write tool to create `<repo-path>/plan.md`:
+
+```markdown
+# Plan: <project-name>
+
+## Objective
+<objective paragraph>
+
+## Streams
+
+| Stream | Status | Blocked By | Notes |
+|--------|--------|------------|-------|
+```
+
+If initial streams were provided, populate the table:
+- Streams with no blockers get status `unblocked`
+- Streams with blockers get status `blocked`
+
+#### `session.md`
+
+Use the Write tool to create `<repo-path>/session.md`:
+
+```markdown
+# Sessions: <project-name>
+```
+
+#### `tasks.md`
+
+Use the Write tool to create `<repo-path>/tasks.md`:
+
+```markdown
+# Tasks: <project-name>
+
+| Date | Stream | Task | Duration |
+|------|--------|------|----------|
+
+## Totals by Stream
+
+| Stream | Total Hours |
+|--------|-------------|
+
+**Project Total**: 0h 00m
+```
+
+#### Stream files (if initial streams provided)
+
+For each stream, use the Write tool to create:
+
+- `<repo-path>/streams/<stream-name>/plan.md` — stream plan with objective, placeholder AC, empty tasks
+- `<repo-path>/streams/<stream-name>/session.md` — empty session log
+- `<repo-path>/streams/<stream-name>/hours.md` — empty hours log with 0h total
+
+See [references/file-formats.md](references/file-formats.md) for exact templates.
+
+### 5. Commit and Return
+
+```bash
+cd <repo-path>
+git add plan.md session.md tasks.md
+git add streams/ 2>/dev/null || true
+git commit -m "meta: initialize project — <project-name>"
+```
+
+Return to original branch or create main:
+
+```bash
+if [ -n "$ORIGINAL_BRANCH" ]; then
+  git checkout "$ORIGINAL_BRANCH"
+else
+  git checkout --orphan main
+  git rm -rf --cached . 2>/dev/null || true
+fi
+```
+
+### 6. Configure Remote (if provided)
+
+If the user provided a GitHub repo URL:
+
+```bash
+git remote get-url origin 2>/dev/null || git remote add origin <repo-url>
+git push -u origin meta
+```
+
+Use the **Edit tool** to add the repo URL to `plan.md` after the project name header:
+
+```markdown
+# Plan: <project-name>
+> Repository: <repo-url>
+```
+
+### 7. Register in Projects Registry
+
+Use the **Read tool** to check if `~/.claude/projects-registry.json` exists. Then use the **Write tool** to create or update it:
+
+```json
+{
+  "projects": [
+    { "path": "<absolute-repo-path>", "name": "<project-name>" }
+  ],
+  "scanPaths": ["~/projects", "~/repos"]
+}
+```
+
+If the file exists, read it first, append to the `projects` array (avoid duplicates by path), and write back.
+
+### 8. Confirm
+
+Tell the user:
+- Project created at `<repo-path>`
+- Meta branch initialized with planning files
+- Number of streams created (if any)
+- Remote configured (if applicable)
+- Registered in projects registry
+
+---
+
+## Important Notes
+
+- **Never commit planning files to main or feature branches.** They live exclusively on `meta`.
+- **Never commit code to the meta branch.** It contains only planning/tracking files.
+- After returning to main/feature branch, the planning files won't be visible in the working tree — this is correct.
+- If the repo already has a `meta` branch, warn the user and ask before overwriting.
+- The `meta` branch is an orphan — it shares no history with code branches.
+- Stream CLAUDE.md files are NOT created at project init. They are generated dynamically when a stream is opened.
+- **Use the Write tool for creating files, Edit tool for modifying files, and Read tool for reading files.** Only use Bash for git commands and directory creation.
+
+---
+
+## File Format Reference
+
+See [references/file-formats.md](references/file-formats.md) for exact file templates.

@@ -23,11 +23,18 @@ Manages a structured workspace of projects (epics) and streams (stories/tickets)
 
 Read config with:
 
-```bash
-cat ~/.claude-projects-config 2>/dev/null || echo '{"projects_root": "~/projects"}'
+```json
+{
+  "projects_root": "~/projects",
+  "repos": {
+    "<project-name>": "git@github.com:<org>/<repo>.git"
+  }
+}
 ```
 
 Default `projects_root` is `~/projects`. If the user specifies a different location, write or update the config file.
+
+The `repos` map is optional. When present, the project's tracking files are synced to a `meta` branch on that remote after every significant update (see [Tracking Branch](#tracking-branch)).
 
 ---
 
@@ -63,41 +70,47 @@ If no projects exist, go straight to creating one.
 
 ## Creating a New Project
 
-1. Ask for the project name (kebab-case)
-2. Ask for a one-line objective
-3. Ask for initial streams (optional)
-4. Create the project structure (see [File Structure](#file-structure))
-5. Populate `plan.md` with the objective, streams table, and dependency map
-6. Confirm creation, then offer to open: `~/bin/project-tmux open <project>`
+1. Ask for the project name (convert to kebab-case for the folder)
+2. Ask for a brief description / objective
+3. Ask for initial planned streams (optional — can be added later)
+4. Ask for an optional GitHub repo URL (for tracking branch sync — can be added later)
+5. Create the project structure (see [File Structure](#file-structure))
+6. Populate `plan.md` with the objective, planned streams, and empty dependency/status table
+7. If a repo URL was provided, add it to `~/.claude-projects-config` under `repos`
+8. Confirm creation, then offer to open it in tmux: `pt open <project-name>`
 
 ---
 
 ## Opening a Project
 
-Read the project plan:
-
-```bash
-cat ~/projects/<project>/plan.md
-```
-
-Show the full streams status table — all streams, not just unblocked ones:
+1. Read the project's `plan.md` from the meta branch using Bash: `git show meta:plan.md`
+2. Display the project objective
+3. Parse the streams table and present a **full status table** — all streams, all statuses — followed by actionable streams highlighted:
 
 ```
 Streams:
 | Stream                  | Status      | Blocked By                          |
 |-------------------------|-------------|-------------------------------------|
-| continuous-notebook     | unblocked   | —                                   |
-| settings-and-themes     | unblocked   | —                                   |
-| note-prioritization     | blocked     | continuous-notebook                 |
-| copy-paste              | blocked     | continuous-notebook                 |
-| reminders-and-alarms    | blocked     | continuous-notebook, settings-and-themes |
-| quick-capture-widget    | blocked     | continuous-notebook                 |
-| speech-to-text          | blocked     | continuous-notebook                 |
+| auth-middleware         | in-progress | —                                   |
+| api-routes              | unblocked   | —                                   |
+| db-schema               | unblocked   | —                                   |
+| notification-system     | blocked     | auth-middleware, api-routes          |
+| dashboard-ui            | planned     | —                                   |
+| settings-page           | complete    | —                                   |
+
+Enter a number to open a stream, or:
+  n  Create a new stream
+  p  Open parallel streams
+  t  View project tasks/hours
 ```
 
-If the project has sub-streams, show those too (grouped under their parent stream).
+4. Wait for user input:
+   - **Number** → open that stream (triggers Phase 5/6 from the project lifecycle — stream design if not yet designed, or implementation if already approved)
+   - **n** → create a new stream
+   - **p** → prompt for which unblocked/in-progress streams to open in parallel
+   - **t** → show project-level tasks and hours summary
 
-Then ask: "Which stream do you want to open? Say **parallel** to open multiple, or **new** to create a stream."
+5. If no streams exist yet, skip the numbered list and offer to create one or run the decompose phase
 
 ---
 
@@ -168,9 +181,10 @@ When the user says "end session", "stop session", "done for now", "wrapping up",
 2. Calculate duration — **round to nearest 15 minutes**
 3. Ask what was accomplished (brief notes)
 4. Append completed session to stream `session.md`
-5. Append entry to stream `hours.md`
-6. Append entry to project-level `tasks.md`
-7. Update project-level `session.md`
+5. Append an entry to stream `hours.md`
+6. Append an entry to project-level `tasks.md`
+7. Update the project-level `session.md`
+8. Push to the `meta` branch (see [Tracking Branch](#tracking-branch))
 
 ---
 
@@ -202,8 +216,66 @@ When the user says "end session", "stop session", "done for now", "wrapping up",
 
 ## Updating Stream Status
 
-When a stream is marked complete, update the project `plan.md`:
-- Change status to `complete`
-- Check if any blocked streams now have all blockers resolved; if so, change them to `unblocked`
+When a stream status changes for any significant reason (started, completed, blocked, unblocked), update the project `plan.md`:
+- Change status to the new value
+- When marking `complete`: check if any other streams were blocked by this one and update their status to `unblocked` if all blockers are now resolved
+- After updating, push to the `meta` branch (see [Tracking Branch](#tracking-branch))
 
 Valid statuses: `planned` | `unblocked` | `in-progress` | `blocked` | `complete` | `on-hold`
+
+---
+
+## Tracking Branch
+
+The `meta` branch in the project's GitHub repo stores the planning state — `plan.md` and all stream files. It is the source of truth for project context across machines and sessions. The `meta` branch contains **only planning/tracking files** — no source code.
+
+### When to Push
+
+Push to `meta` after any of:
+- Stream status change (`planned` → `in-progress`, `in-progress` → `complete`, etc.)
+- Session end (session.md and hours.md updated)
+- Plan updated (tasks checked off, acceptance criteria changed)
+- New stream created
+
+### How to Push
+
+1. Look up the repo URL for this project in `~/.claude-projects-config` under `repos`
+2. If no URL is configured, skip silently
+3. Set up a temporary clone or use the project's worktree if available:
+
+```bash
+# From a temp dir — clone sparse, meta branch only
+TMPDIR=$(mktemp -d)
+git clone --depth 1 --branch meta --no-checkout <repo-url> "$TMPDIR/meta-repo" 2>/dev/null \
+  || git clone --depth 1 --no-checkout <repo-url> "$TMPDIR/meta-repo"
+
+cd "$TMPDIR/meta-repo"
+
+# If meta branch doesn't exist yet, create orphan
+git checkout meta 2>/dev/null || git checkout --orphan meta
+
+# Wipe the branch content and replace with current planning files
+git rm -rf . --quiet 2>/dev/null || true
+
+# Copy planning files
+cp <projects-root>/<project-name>/plan.md .
+cp -r <projects-root>/<project-name>/streams ./streams
+
+# Commit and push
+git add -A
+git commit -m "meta: update tracking — <brief description of what changed>"
+git push origin meta
+
+# Clean up
+rm -rf "$TMPDIR"
+```
+
+4. Inform the user: `"Pushed planning state to meta branch."`
+
+### Initial Setup
+
+When a repo is first configured for a project:
+1. Create the orphan `meta` branch with the current planning state
+2. Push it — this is the baseline
+
+Non-planning files (source code, `.claudeignore`, configs) live only on `main` and feature branches, never on `meta`. Planning files (plan.md, session.md, hours.md, stream plans) live only on `meta`, never committed to `main`.
