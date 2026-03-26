@@ -1,21 +1,50 @@
 ---
 name: create-pr
-description: This skill should be used when the user asks to "create a PR", "open a PR", "make a pull request", "submit a PR", "raise a PR", or "push a PR". Creates a well-structured pull request using Conventional Commits title format and a standard body template.
-version: 1.0.0
+description: This skill should be used when the user asks to "create a PR", "open a PR", "make a pull request", "submit a PR", "raise a PR", or "push a PR". Creates a draft pull request with a clear title, AC mapping, and CI monitoring.
+version: 2.0.0
 ---
 
 # Create PR
 
-Creates a pull request with a Conventional Commits title and a structured body covering why, what, type, testing, and checklist. Conditionally includes screenshots and breaking change sections based on the diff.
+Creates a draft pull request, presents it for user approval, then monitors CI checks until they pass or fail.
 
 ---
 
-## Step 1: Gather Context
+## Step 1: Pre-flight Checks
 
 Run these in parallel:
 
 ```bash
 git status
+```
+
+```bash
+git branch --show-current
+```
+
+```bash
+git log main..HEAD --oneline
+```
+
+```bash
+gh pr view --json number,title,url,state 2>/dev/null
+```
+
+Evaluate:
+
+1. **Not on main/master.** If on main, stop and ask the user which branch to create.
+2. **Commits exist ahead of base.** If `git log main..HEAD` is empty, stop — nothing to PR.
+3. **Uncommitted changes.** If dirty, ask the user if they want to commit first.
+4. **PR already exists.** If `gh pr view` succeeds, skip to **Step 6: Monitor CI**.
+
+---
+
+## Step 2: Gather Context
+
+Run in parallel:
+
+```bash
+git diff main..HEAD --stat
 ```
 
 ```bash
@@ -26,143 +55,131 @@ git log main..HEAD --oneline
 git diff main..HEAD
 ```
 
-```bash
-cat ~/.claude-projects-config 2>/dev/null || echo '{}'
-```
+Also:
 
-Also read the active stream's `plan.md` if in a project context — it provides the objective and acceptance criteria useful for the PR description.
-
-If the branch is already tracking a remote, check if it's up to date:
-
-```bash
-git status -sb
-```
+- **Read the stream plan / acceptance criteria.** Check the branch name for a stream reference (e.g. `stream/<name>`) and read its plan: `git show meta/<project>:streams/<name>/plan.md`. If no stream plan exists, check for linked issues via branch name patterns (e.g. `feat/PROJ-123-description`).
+- **Detect PR template.** Check these locations in order, use the first found:
+  - `.github/PULL_REQUEST_TEMPLATE.md`
+  - `.github/pull_request_template.md`
+  - `docs/pull_request_template.md`
+  - `.github/PULL_REQUEST_TEMPLATE/` (list files, ask user to pick if multiple)
 
 ---
 
-## Step 2: Analyze the Diff
+## Step 3: Extract Ticket Number
 
-From the diff, determine:
+Look for a ticket/issue reference in:
 
-1. **Change type** — which Conventional Commits type fits best:
-   - `feat` — new user-facing feature
-   - `fix` — bug fix
-   - `refactor` — code change with no behavior change
-   - `test` — adding or updating tests
-   - `chore` — dependencies, tooling, config
-   - `ci` — CI/CD workflows
-   - `docs` — documentation only
-   - `perf` — performance improvement
+- The branch name (e.g. `PROJ-123`, `#45`, `GH-78`)
+- Commit messages
+- Stream plan metadata
 
-2. **Scope** — optional, kebab-case area of the codebase (e.g. `db`, `auth`, `ui`, `types`)
-
-3. **Breaking change** — does the diff contain any of:
-   - Removed or renamed exports
-   - Changed function signatures
-   - Renamed database columns or tables
-   - Removed API endpoints or changed response shapes
-
-4. **Has UI changes** — does the diff touch any component, screen, or style file?
-
-5. **Short description** — imperative mood, lowercase, no period. E.g. "add pagination to notes query"
+If found, include it in the title.
 
 ---
 
-## Step 3: Construct the Title
+## Step 4: Generate Title and Body
 
-Format: `<type>(<scope>): <description>`
+### Title
 
-- Include scope only when it meaningfully narrows the change
-- Append `!` before the colon for breaking changes: `feat(db)!: rename entries table to notes`
-- Keep under 72 characters
+- Format: `[TICKET-123] Clear, human-readable description` (with ticket if found, omit brackets if none)
+- Plain English — someone scanning a PR list should instantly understand what this does
+- Under 70 characters
+- Examples: `[DATA-42] Add user session expiry to auth middleware`, `Fix race condition in batch processor`
 
-Examples:
-```
-feat(db): add notes schema and WAL pragmas
-test(db): add integration tests for notes CRUD
-refactor(types): rename Entry to Note, content to text
-ci: add GitHub Actions test workflow on PR
-```
+### Body
 
----
-
-## Step 4: Build the PR Body
-
-Use this template, deleting sections that don't apply:
+Use the detected repo template if available. Otherwise use this format:
 
 ```markdown
-## Why
-<!-- What problem does this solve? What's the motivation? Link to issue/ticket if applicable. -->
+## Summary
+- 1-3 concise bullet points: what this does and why
 
+## Acceptance criteria
+- [ ] Map each AC item from the stream plan to what was implemented
+- [ ] Note any AC items deferred or partially done
+- (Omit section if no stream plan / AC exists)
 
-## What changed
-<!-- Concrete summary of what was added, removed, or modified. -->
+## Notable decisions
+- Call out anything unusual, non-standard, or surprising in the implementation
+- Workarounds, tech debt taken on, deviations from typical patterns
+- If nothing unusual, omit this section entirely
 
+## Changes
+- Key changes organized by area, kept brief
 
-## Type of change
-- [ ] feat — new feature
-- [ ] fix — bug fix
-- [ ] refactor — no behavior change
-- [ ] test — tests only
-- [ ] chore — tooling / dependencies
-- [ ] ci — CI/CD
-- [ ] docs — documentation
-- [ ] perf — performance
-
-## How to test
-<!-- Step-by-step instructions to verify this works. -->
-1.
-
-## Checklist
-- [ ] Tests pass locally
-- [ ] No unintended files included
-- [ ] Self-reviewed the diff
-
-<!-- CONDITIONAL: include only if breaking changes exist -->
-## Breaking changes
-<!-- What breaks, and how should callers migrate? -->
-
-<!-- CONDITIONAL: include only if UI files changed -->
-## Screenshots
-<!-- Before / after screenshots for any visual changes -->
+## Test plan
+- How to verify this works
 ```
 
-**Rules for filling in the body:**
-- **Why**: derive from the stream objective, commit messages, or the nature of the diff. Be specific — "foundation for all other streams" is better than "made some changes"
-- **What changed**: bullet points listing the concrete changes (files, types, behaviors) — not just filenames
-- **Type of change**: check all that apply
-- **How to test**: include the actual commands (e.g. `npm test`) plus any manual steps
-- **Checklist**: check items that are genuinely satisfied based on the diff
-- **Breaking changes**: include and fill in only if a breaking change was detected in Step 2
-- **Screenshots**: include only if UI files were changed — otherwise remove the section entirely
+**Writing style:** Be concise. No filler. Every line should earn its place. Reviewers should be able to skim the PR in 30 seconds and understand the scope and risk.
+
+**Scope check:** If the diff is large (>500 lines changed), note this and suggest splitting if appropriate.
 
 ---
 
-## Step 5: Push and Create the PR
+## Step 5: Present for User Review
 
-If the branch has no remote tracking branch yet:
+Before creating anything, display the full proposed title and body:
 
-```bash
-git push -u origin <branch-name>
+```
+── Proposed PR ──────────────────────────
+Title: [TICKET-123] Clear description here
+
+Body:
+<full markdown body>
+─────────────────────────────────────────
 ```
 
-Then create the PR:
+Ask: **"Look good? Edit anything? (y / edit instructions / n)"**
 
-```bash
-gh pr create \
-  --title "<title>" \
-  --body "<body>" \
-  --base main \
-  --draft
-```
+- If the user approves: proceed to create
+- If the user gives edit instructions: revise and re-present
+- If the user says no: stop
 
-Return the PR URL to the user.
+**Do not create the PR without user approval.**
 
 ---
 
-## Step 6: Confirm
+## Step 6: Push and Create
 
-Show the user:
-- The PR title
-- The PR URL
-- A one-line summary of what was included/excluded from the body (e.g. "no breaking changes section, no screenshots")
+```bash
+git push -u origin HEAD
+```
+
+```bash
+gh pr create --draft --title "<title>" --body "<body>" --base main
+```
+
+The `--draft` flag is **mandatory** — never create a non-draft PR.
+
+Display the PR URL to the user.
+
+---
+
+## Step 7: Monitor CI Checks
+
+After creating (or finding an existing) PR:
+
+1. Wait 15 seconds for checks to register, then:
+
+```bash
+gh pr checks --watch --fail-fast
+```
+
+2. **If checks pass:** Report success. Ask the user if they'd like to mark the PR as ready for review (`gh pr ready`).
+
+3. **If checks fail:**
+   - Run `gh pr checks` to identify which failed
+   - For each failed check, fetch the log: `gh run view <run-id> --log-failed`
+   - Present a summary of failures with actionable context
+   - Ask the user if they want to fix the issues now
+
+---
+
+## Important Rules
+
+- ALWAYS use `--draft`. No exceptions.
+- NEVER force-push without explicit user approval.
+- NEVER create the PR without showing the user the title and body first.
+- If the base branch is ambiguous, ask — don't guess.
