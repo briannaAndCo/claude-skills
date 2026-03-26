@@ -139,30 +139,36 @@ open_tab() {
   local run="$1"
   local term
   term="$(detect_terminal)"
-  local as_cmd="${run//\"/\\\"}"
+
+  # Write command to a temp script to avoid AppleScript string escaping issues
+  local tmp_script
+  tmp_script="$(mktemp /tmp/pt-launch-XXXXXXXX)"
+  cat > "$tmp_script" <<SCRIPT
+#!/usr/bin/env bash
+$run
+SCRIPT
+  chmod +x "$tmp_script"
 
   if [ "$term" = "iTerm2" ]; then
-    osascript - "$as_cmd" <<'APPLESCRIPT'
+    osascript - "$tmp_script" <<'APPLESCRIPT'
 on run argv
-  set theCmd to item 1 of argv
+  set theScript to item 1 of argv
   tell application "iTerm2"
     tell current window
       create tab with default profile
       tell current session
-        write text theCmd
+        write text theScript
       end tell
     end tell
   end tell
 end run
 APPLESCRIPT
   else
-    osascript - "$as_cmd" <<'APPLESCRIPT'
+    osascript - "$tmp_script" <<'APPLESCRIPT'
 on run argv
-  set theCmd to item 1 of argv
+  set theScript to item 1 of argv
   tell application "Terminal"
-    tell application "System Events" to keystroke "t" using command down
-    delay 0.3
-    do script theCmd in front window
+    do script theScript
   end tell
 end run
 APPLESCRIPT
@@ -199,9 +205,9 @@ ensure_worktree() {
   mkdir -p "$repo_dir/.worktrees"
 
   if git -C "$repo_dir" show-ref --quiet "refs/heads/$branch"; then
-    git -C "$repo_dir" worktree add "$worktree_dir" "$branch"
+    git -C "$repo_dir" worktree add "$worktree_dir" "$branch" >&2
   else
-    git -C "$repo_dir" worktree add -b "$branch" "$worktree_dir" main
+    git -C "$repo_dir" worktree add -b "$branch" "$worktree_dir" main >&2
   fi
 
   echo "$worktree_dir"
@@ -219,7 +225,7 @@ write_stream_context() {
   local project_name=""
   if git -C "$repo_dir" show-ref --quiet refs/heads/meta; then
     project_name=$(git -C "$repo_dir" show meta:plan.md 2>/dev/null | head -1 | sed 's/^# Plan: //')
-    project_objective=$(git -C "$repo_dir" show meta:plan.md 2>/dev/null | sed -n '/^## Objective$/,/^##/p' | head -n -1 | tail -n +2)
+    project_objective=$(git -C "$repo_dir" show meta:plan.md 2>/dev/null | sed -n '/^## Objective$/,/^##/p' | sed '1d;$d')
   fi
 
   local stream_plan=""
@@ -298,22 +304,20 @@ open_stream() {
   local center_status="${stream_name}"
   local right_status="${notes}  "
 
-  local escaped_dir
-  escaped_dir="$(printf '%q' "$worktree_dir")"
-
   # Create tmux session with styled status bar
-  local tmux_cmd="tmux new-session -s $(printf '%q' "$session_name") -c ${escaped_dir} \\
-    \\; set status on \\
-    \\; set status-position top \\
-    \\; set status-style 'bg=${color},fg=white,bold' \\
-    \\; set status-left '$(printf '%q' "  ${indicator}  │")' \\
-    \\; set status-left-length 20 \\
-    \\; set status-right '$(printf '%q' "│  ${notes}  ")' \\
-    \\; set status-right-length 80 \\
-    \\; set status-justify centre \\
-    \\; set window-status-current-format ' ${stream_name} ' \\
-    \\; set window-status-format ' ${stream_name} ' \\
-    \\; send-keys 'claude --permission-mode plan start' Enter"
+  local tmux_cmd
+  tmux_cmd="tmux new-session -s '${session_name}' -c '${worktree_dir}'"
+  tmux_cmd+=" \\; set status on"
+  tmux_cmd+=" \\; set status-position top"
+  tmux_cmd+=" \\; set status-style 'bg=${color},fg=white,bold'"
+  tmux_cmd+=" \\; set status-left '  ${indicator}  │'"
+  tmux_cmd+=" \\; set status-left-length 20"
+  tmux_cmd+=" \\; set status-right '│  ${notes}  '"
+  tmux_cmd+=" \\; set status-right-length 80"
+  tmux_cmd+=" \\; set status-justify centre"
+  tmux_cmd+=" \\; set window-status-current-format ' ${stream_name} '"
+  tmux_cmd+=" \\; set window-status-format ' ${stream_name} '"
+  tmux_cmd+=" \\; send-keys 'claude --permission-mode plan start' Enter"
 
   open_tab "$tmux_cmd"
   echo "Opened stream: $stream_name ($indicator)"
@@ -365,7 +369,7 @@ open_project() {
   plan=$(git -C "$repo_dir" show meta:plan.md)
 
   local objective
-  objective=$(echo "$plan" | sed -n '/^## Objective$/,/^##/p' | head -n -1 | tail -n +2 | head -3)
+  objective=$(echo "$plan" | sed -n '/^## Objective$/,/^##/p' | sed '1d;$d' | head -3)
 
   echo ""
   echo "$(echo "$plan" | head -1)"
