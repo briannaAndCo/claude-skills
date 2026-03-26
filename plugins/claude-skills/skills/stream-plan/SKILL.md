@@ -22,10 +22,10 @@ Use Bash to read planning state from meta:
 
 ```bash
 cd <repo-path>
-git show meta:design.md
-git show meta:requirements.md 2>/dev/null || true
-git show meta:plan.md
-git show meta:streams/<stream-name>/plan.md
+git show meta/<project-slug>:design.md
+git show meta/<project-slug>:requirements.md 2>/dev/null || true
+git show meta/<project-slug>:plan.md
+git show meta/<project-slug>:streams/<stream-name>/plan.md
 ```
 
 Extract:
@@ -175,7 +175,7 @@ Use the **Write tool** to update `streams/<name>/plan.md` with the refined plan.
 
 ```bash
 cd <repo-path>
-git checkout meta
+git checkout meta/<project-slug>
 git add streams/<name>/plan.md
 git commit -m "meta: refined stream plan — <stream-name>"
 git checkout <original-branch>
@@ -184,7 +184,7 @@ git checkout <original-branch>
 If a remote is configured, push:
 
 ```bash
-git push origin meta
+git push origin meta/<project-slug>
 ```
 
 ---

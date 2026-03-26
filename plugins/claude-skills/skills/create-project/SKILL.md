@@ -6,7 +6,7 @@ version: 1.0.0
 
 # Create Project
 
-Creates a new project — a git repo with an orphan `meta` branch containing planning and tracking files. Code lives on main/feature branches; planning state lives on `meta`.
+Creates a new project — a git repo with an orphan `meta/<project-slug>` branch containing planning and tracking files. Code lives on main/feature branches; planning state lives on its own meta branch. Each project gets its own isolated meta branch, so multiple projects can coexist on the same repo.
 
 ---
 
@@ -38,16 +38,34 @@ git init <repo-path>
 
 If a repo already exists, use it as-is.
 
-### 3. Create the Orphan Meta Branch
+### 3. Check for Existing Meta Branches
+
+```bash
+cd <repo-path>
+git branch --list 'meta/*'
+```
+
+If existing `meta/*` branches are found, list them to the user:
+
+> "This repo already has projects on meta branches:
+> - meta/claude-workflow (from project 'claude-workflow')
+>
+> Creating a new project alongside them. Proceed?"
+
+**Wait for confirmation.**
+
+### 4. Create the Orphan Meta Branch
+
+The meta branch is named `meta/<project-slug>` where `<project-slug>` is the kebab-case project name.
 
 ```bash
 cd <repo-path>
 ORIGINAL_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
-git checkout --orphan meta
+git checkout --orphan meta/<project-slug>
 git rm -rf --cached . 2>/dev/null || true
 ```
 
-### 4. Write Planning Files
+### 5. Write Planning Files
 
 Use the **Write tool** (not Bash) to create all planning files in the repo root on the meta branch.
 
@@ -107,7 +125,7 @@ For each stream, use the Write tool to create:
 
 See [references/file-formats.md](references/file-formats.md) for exact templates.
 
-### 5. Commit and Return
+### 6. Commit and Return
 
 ```bash
 cd <repo-path>
@@ -127,13 +145,13 @@ else
 fi
 ```
 
-### 6. Configure Remote (if provided)
+### 7. Configure Remote (if provided)
 
 If the user provided a GitHub repo URL:
 
 ```bash
 git remote get-url origin 2>/dev/null || git remote add origin <repo-url>
-git push -u origin meta
+git push -u origin meta/<project-slug>
 ```
 
 Use the **Edit tool** to add the repo URL to `plan.md` after the project name header:
@@ -143,26 +161,26 @@ Use the **Edit tool** to add the repo URL to `plan.md` after the project name he
 > Repository: <repo-url>
 ```
 
-### 7. Register in Projects Registry
+### 8. Register in Projects Registry
 
 Use the **Read tool** to check if `~/.claude/projects-registry.json` exists. Then use the **Write tool** to create or update it:
 
 ```json
 {
   "projects": [
-    { "path": "<absolute-repo-path>", "name": "<project-name>" }
+    { "path": "<absolute-repo-path>", "name": "<project-name>", "metaBranch": "meta/<project-slug>" }
   ],
   "scanPaths": ["~/projects", "~/repos"]
 }
 ```
 
-If the file exists, read it first, append to the `projects` array (avoid duplicates by path), and write back.
+If the file exists, read it first, append to the `projects` array (avoid duplicates by path + name), and write back. Note: the same repo path can appear multiple times with different project names and meta branches.
 
-### 8. Confirm
+### 9. Confirm
 
 Tell the user:
 - Project created at `<repo-path>`
-- Meta branch initialized with planning files
+- Meta branch `meta/<project-slug>` initialized with planning files
 - Number of streams created (if any)
 - Remote configured (if applicable)
 - Registered in projects registry
@@ -171,11 +189,13 @@ Tell the user:
 
 ## Important Notes
 
-- **Never commit planning files to main or feature branches.** They live exclusively on `meta`.
+- **Never commit planning files to main or feature branches.** They live exclusively on `meta/<project-slug>`.
 - **Never commit code to the meta branch.** It contains only planning/tracking files.
 - After returning to main/feature branch, the planning files won't be visible in the working tree — this is correct.
-- If the repo already has a `meta` branch, warn the user and ask before overwriting.
-- The `meta` branch is an orphan — it shares no history with code branches.
+- **Each project gets its own meta branch** — `meta/<project-slug>`. Multiple projects can coexist on the same repo.
+- If the repo already has a `meta/<project-slug>` branch with the same slug, warn the user and ask before overwriting.
+- The meta branch is an orphan — it shares no history with code branches.
+- **Legacy `meta` branches** (without a project slug) should be migrated to `meta/<project-slug>` format. See the migration note below.
 - Stream CLAUDE.md files are NOT created at project init. They are generated dynamically when a stream is opened.
 - **Use the Write tool for creating files, Edit tool for modifying files, and Read tool for reading files.** Only use Bash for git commands and directory creation.
 

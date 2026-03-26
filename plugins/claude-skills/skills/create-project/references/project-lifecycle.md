@@ -6,7 +6,7 @@ The full lifecycle from idea to merged code, broken into phases. Each phase is a
 
 Throughout all phases, prefer dedicated tools over Bash:
 
-- **Read tool**: read files from disk or from git (via `git show meta:<file>` in Bash only when on a different branch)
+- **Read tool**: read files from disk or from git (via `git show meta/<project-slug>:<file>` in Bash only when on a different branch)
 - **Write tool**: create new files
 - **Edit tool**: modify existing files
 - **Glob tool**: find files by pattern
@@ -19,7 +19,7 @@ Throughout all phases, prefer dedicated tools over Bash:
 ## Phase Overview
 
 ```
-1. CREATE        → git init, meta branch, registry
+1. CREATE        → git init, meta/<slug> branch, registry
 2. REQUIREMENTS  → gather, discuss, define edge cases, write requirements.md
 3. DESIGN        → high-level architecture, language-specific refinement, tradeoff review
 4. DECOMPOSE     → break into streams with AC, dependencies, wave plan
@@ -33,9 +33,9 @@ Throughout all phases, prefer dedicated tools over Bash:
 
 ## Phase 1: Create (skill: `create-project`)
 
-Already defined in SKILL.md. Creates repo, orphan `meta` branch, registry entry.
+Already defined in SKILL.md. Creates repo, orphan `meta/<project-slug>` branch, registry entry.
 
-**Output on meta:** `plan.md`, `session.md`, `tasks.md`
+**Output on meta branch:** `plan.md`, `session.md`, `tasks.md`
 
 ---
 
@@ -97,9 +97,9 @@ Break the design into implementable streams with high-level acceptance criteria,
 
 1. **Read context** — Use Bash to read from meta:
    ```bash
-   git show meta:requirements.md
-   git show meta:design.md
-   git show meta:plan.md
+   git show meta/<project-slug>:requirements.md
+   git show meta/<project-slug>:design.md
+   git show meta/<project-slug>:plan.md
    ```
 
 2. **Identify streams** — Map capabilities and components to streams:
@@ -131,7 +131,7 @@ Break the design into implementable streams with high-level acceptance criteria,
 7. **Commit** — Use the **Edit tool** to update `plan.md` and the **Write tool** to create each `streams/<name>/plan.md`. Then commit to meta:
    ```bash
    cd <repo-path>
-   git checkout meta
+   git checkout meta/<project-slug>
    git add plan.md streams/
    git commit -m "meta: decompose into streams with wave plan"
    git checkout <original-branch>
@@ -283,7 +283,7 @@ Use the **Edit tool** to set stream status to `in-progress` in `plan.md` on meta
 
 ```bash
 cd <repo-path>
-git checkout meta
+git checkout meta/<project-slug>
 git add plan.md
 git commit -m "meta: stream in-progress — <stream-name>"
 git checkout <original-branch>
@@ -407,7 +407,7 @@ Then commit:
 
 ```bash
 cd <repo-path>
-git checkout meta
+git checkout meta/<project-slug>
 git add plan.md
 git commit -m "meta: stream complete — <stream-name>"
 git checkout <original-branch>

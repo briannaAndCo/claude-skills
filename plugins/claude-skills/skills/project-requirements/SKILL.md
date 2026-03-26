@@ -9,7 +9,7 @@ version: 1.0.0
 Turns source material — documents, notes, typed context, or conversation — into a structured, testable requirements document. Focuses on extracting *what* the system must do, surfacing ambiguities, identifying edge cases, and establishing naming conventions — all before any design or architecture work begins.
 
 **Input:** Source documents (files) and/or typed context from the user
-**Output on meta:** `requirements.md`
+**Output on meta branch (`meta/<project-slug>`):** `requirements.md`
 
 ---
 
@@ -204,7 +204,7 @@ Use the **Write tool** to create `requirements.md` in the repo root. Then commit
 
 ```bash
 cd <repo-path>
-git checkout meta
+git checkout meta/<project-slug>
 git add requirements.md
 git commit -m "meta: add requirements"
 git checkout <original-branch>
@@ -213,7 +213,7 @@ git checkout <original-branch>
 If a remote is configured, push:
 
 ```bash
-git push origin meta
+git push origin meta/<project-slug>
 ```
 
 ---

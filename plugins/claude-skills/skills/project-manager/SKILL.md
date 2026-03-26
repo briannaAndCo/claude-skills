@@ -34,7 +34,7 @@ Read config with:
 
 Default `projects_root` is `~/projects`. If the user specifies a different location, write or update the config file.
 
-The `repos` map is optional. When present, the project's tracking files are synced to a `meta` branch on that remote after every significant update (see [Tracking Branch](#tracking-branch)).
+The `repos` map is optional. When present, the project's tracking files are synced to a `meta/<project-slug>` branch on that remote after every significant update (see [Tracking Branch](#tracking-branch)).
 
 ---
 
@@ -83,7 +83,7 @@ If no projects exist, go straight to creating one.
 
 ## Opening a Project
 
-1. Read the project's `plan.md` from the meta branch using Bash: `git show meta:plan.md`
+1. Read the project's `plan.md` from the meta branch using Bash: `git show meta/<project-slug>:plan.md`
 2. Display the project objective
 3. Parse the streams table and present a **full status table** — all streams, all statuses — followed by actionable streams highlighted:
 
@@ -184,7 +184,7 @@ When the user says "end session", "stop session", "done for now", "wrapping up",
 5. Append an entry to stream `hours.md`
 6. Append an entry to project-level `tasks.md`
 7. Update the project-level `session.md`
-8. Push to the `meta` branch (see [Tracking Branch](#tracking-branch))
+8. Push to the `meta/<project-slug>` branch (see [Tracking Branch](#tracking-branch))
 
 ---
 
@@ -219,7 +219,7 @@ When the user says "end session", "stop session", "done for now", "wrapping up",
 When a stream status changes for any significant reason (started, completed, blocked, unblocked), update the project `plan.md`:
 - Change status to the new value
 - When marking `complete`: check if any other streams were blocked by this one and update their status to `unblocked` if all blockers are now resolved
-- After updating, push to the `meta` branch (see [Tracking Branch](#tracking-branch))
+- After updating, push to the `meta/<project-slug>` branch (see [Tracking Branch](#tracking-branch))
 
 Valid statuses: `planned` | `unblocked` | `in-progress` | `blocked` | `complete` | `on-hold`
 
@@ -227,11 +227,15 @@ Valid statuses: `planned` | `unblocked` | `in-progress` | `blocked` | `complete`
 
 ## Tracking Branch
 
-The `meta` branch in the project's GitHub repo stores the planning state — `plan.md` and all stream files. It is the source of truth for project context across machines and sessions. The `meta` branch contains **only planning/tracking files** — no source code.
+Each project's `meta/<project-slug>` branch in the GitHub repo stores the planning state — `plan.md` and all stream files. It is the source of truth for project context across machines and sessions. The meta branch contains **only planning/tracking files** — no source code. Multiple projects can coexist on the same repo, each with its own `meta/<slug>` branch.
+
+### Resolving the Meta Branch
+
+Look up the project's `metaBranch` from `~/.claude/projects-registry.json`. If not found, fall back to `meta/<project-slug>` where `<project-slug>` is the kebab-case project name.
 
 ### When to Push
 
-Push to `meta` after any of:
+Push to `meta/<project-slug>` after any of:
 - Stream status change (`planned` → `in-progress`, `in-progress` → `complete`, etc.)
 - Session end (session.md and hours.md updated)
 - Plan updated (tasks checked off, acceptance criteria changed)
@@ -241,18 +245,22 @@ Push to `meta` after any of:
 
 1. Look up the repo URL for this project in `~/.claude-projects-config` under `repos`
 2. If no URL is configured, skip silently
-3. Set up a temporary clone or use the project's worktree if available:
+3. Resolve the meta branch name (see above)
+4. Set up a temporary clone or use the project's worktree if available:
 
 ```bash
+# Resolve the meta branch name from registry or convention
+META_BRANCH="meta/<project-slug>"
+
 # From a temp dir — clone sparse, meta branch only
 TMPDIR=$(mktemp -d)
-git clone --depth 1 --branch meta --no-checkout <repo-url> "$TMPDIR/meta-repo" 2>/dev/null \
+git clone --depth 1 --branch "$META_BRANCH" --no-checkout <repo-url> "$TMPDIR/meta-repo" 2>/dev/null \
   || git clone --depth 1 --no-checkout <repo-url> "$TMPDIR/meta-repo"
 
 cd "$TMPDIR/meta-repo"
 
 # If meta branch doesn't exist yet, create orphan
-git checkout meta 2>/dev/null || git checkout --orphan meta
+git checkout "$META_BRANCH" 2>/dev/null || git checkout --orphan "$META_BRANCH"
 
 # Wipe the branch content and replace with current planning files
 git rm -rf . --quiet 2>/dev/null || true
@@ -264,18 +272,31 @@ cp -r <projects-root>/<project-name>/streams ./streams
 # Commit and push
 git add -A
 git commit -m "meta: update tracking — <brief description of what changed>"
-git push origin meta
+git push origin "$META_BRANCH"
 
 # Clean up
 rm -rf "$TMPDIR"
 ```
 
-4. Inform the user: `"Pushed planning state to meta branch."`
+5. Inform the user: `"Pushed planning state to meta/<project-slug> branch."`
 
 ### Initial Setup
 
 When a repo is first configured for a project:
-1. Create the orphan `meta` branch with the current planning state
+1. Create the orphan `meta/<project-slug>` branch with the current planning state
 2. Push it — this is the baseline
 
-Non-planning files (source code, `.claudeignore`, configs) live only on `main` and feature branches, never on `meta`. Planning files (plan.md, session.md, hours.md, stream plans) live only on `meta`, never committed to `main`.
+Non-planning files (source code, `.claudeignore`, configs) live only on `main` and feature branches, never on `meta/*`. Planning files (plan.md, session.md, hours.md, stream plans) live only on `meta/<project-slug>`, never committed to `main`.
+
+### Migrating Legacy `meta` Branches
+
+If a repo has a bare `meta` branch (without a project slug suffix), migrate it:
+
+```bash
+cd <repo-path>
+git branch -m meta meta/<project-slug>
+git push origin meta/<project-slug>
+git push origin --delete meta
+```
+
+Then update `~/.claude/projects-registry.json` to set `"metaBranch": "meta/<project-slug>"` for that project.

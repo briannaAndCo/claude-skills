@@ -8,7 +8,7 @@ version: 1.0.0
 
 Produces a high-level design for a project: architecture, use cases, workflows, and — critically — a set of **guiding principles** that all stream-level plans and reviews must follow. Language-agnostic by default, with optional stack-specific refinements.
 
-**Output on meta:** `design.md`
+**Output on meta branch (`meta/<project-slug>`):** `design.md`
 
 ---
 
@@ -20,8 +20,8 @@ Use Bash to read existing planning state from meta:
 
 ```bash
 cd <repo-path>
-git show meta:requirements.md 2>/dev/null || true
-git show meta:plan.md
+git show meta/<project-slug>:requirements.md 2>/dev/null || true
+git show meta/<project-slug>:plan.md
 ```
 
 If the repo has existing code, launch 2-3 **Explore agents** in parallel to:
@@ -162,7 +162,7 @@ Use the **Write tool** to create `design.md` in the repo root. Then commit to me
 
 ```bash
 cd <repo-path>
-git checkout meta
+git checkout meta/<project-slug>
 git add design.md
 git commit -m "meta: add project design and guiding principles"
 git checkout <original-branch>
@@ -171,7 +171,7 @@ git checkout <original-branch>
 If a remote is configured, push:
 
 ```bash
-git push origin meta
+git push origin meta/<project-slug>
 ```
 
 ---
