@@ -81,13 +81,31 @@ Use the Write tool to create `<repo-path>/plan.md`:
 
 ## Streams
 
-| Stream | Status | Blocked By | Notes |
-|--------|--------|------------|-------|
+| Stream | Status | Type | Blocked By | Notes |
+|--------|--------|------|------------|-------|
 ```
 
 If initial streams were provided, populate the table:
 - Streams with no blockers get status `unblocked`
 - Streams with blockers get status `blocked`
+- Default type is `feature` unless the user specifies otherwise
+- Valid types: `feature` | `bug` | `refactor` | `research` | `ops` | `docs`
+
+#### `project.json`
+
+Use the Write tool to create `<repo-path>/project.json` — a machine-readable manifest for scripts:
+
+```json
+{
+  "name": "<project-name>",
+  "created": "<YYYY-MM-DD>",
+  "repo": "<repo-url or empty string>",
+  "objective": "<objective paragraph>",
+  "streams": {}
+}
+```
+
+If initial streams were provided, populate the `streams` object. See [references/file-formats.md](references/file-formats.md) for the schema.
 
 #### `session.md`
 
@@ -129,7 +147,7 @@ See [references/file-formats.md](references/file-formats.md) for exact templates
 
 ```bash
 cd <repo-path>
-git add plan.md session.md tasks.md
+git add plan.md session.md tasks.md project.json
 git add streams/ 2>/dev/null || true
 git commit -m "meta: initialize project — <project-name>"
 ```

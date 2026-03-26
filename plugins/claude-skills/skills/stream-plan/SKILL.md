@@ -296,6 +296,11 @@ git push origin meta/<project-slug>
 - **Quality checklist front-loads review.** The review-stream skill will verify these same concerns — catching them here means fewer review iterations.
 - **Best practices are filtered through principles.** A "best practice" that conflicts with a guiding principle is not applicable to this project. Surface the conflict rather than silently adopting one over the other.
 - **PRs should be ≤8 files.** If a stream touches more than 8 files, split into multiple modular PRs. Each PR should be self-contained and mergeable on its own. Don't split artificially if the work naturally fits in one PR.
+- **Include model recommendations in the plan.** For each task or PR in the breakdown, note the recommended model tier:
+  - **Mechanical** (Haiku/fast): boilerplate, single-file changes, config updates, simple tests
+  - **Standard** (Sonnet): multi-file features, integration work, pattern-following implementation
+  - **Complex** (Opus): architecture decisions, cross-cutting refactors, design review, complex debugging
+  This helps the implementer (human or agent) choose the right model per task, reducing cost on routine work and ensuring quality on complex work.
 - **Question oddities and side effects.** If something seems strange, inconsistent, or could have unintended consequences, flag it. Don't silently proceed past potential issues. Surface potential improvements and ask the user whether to include or defer them.
 - **Questions are asked one at a time.** Never batch multiple questions into a single message. Ask, wait, incorporate, then ask the next.
 - **Use the Write tool for creating files, Edit tool for modifying files, and Read tool for reading files.** Only use Bash for git commands and directory creation.

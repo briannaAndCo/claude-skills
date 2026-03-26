@@ -136,10 +136,29 @@ Delegate to the `create-stream` skill, passing the resolved project path and met
 
 ---
 
+## Script-First Operations
+
+For displaying project status and stream lists, prefer the shared scripts over Claude parsing markdown:
+
+```bash
+SCRIPTS="${CLAUDE_SKILL_DIR}/../../scripts"
+# Project overview with stream indicators:
+bash "$SCRIPTS/pm-status.sh" <project>
+# What's ready to work on:
+bash "$SCRIPTS/pm-next.sh" <project>
+# List all projects:
+bash "$SCRIPTS/pm-list-projects.sh"
+```
+
+Use script output directly when presenting the streams table to the user. This is instant and costs zero tokens.
+
+---
+
 ## Important Notes
 
 - **This skill is the primary "open project" entry point.** The `project-manager` skill should delegate here when the user selects a project to open.
 - **All stream opening is delegated to `open-stream`.** Do not duplicate worktree, tmux, or CLAUDE.md logic here.
-- **Use Read tool for files, Write tool for creating, Edit tool for modifying.** Only use Bash for git commands.
+- **Use Read tool for files, Write tool for creating, Edit tool for modifying.** Only use Bash for git commands and shared scripts.
 - **Status mapping uses visual indicators** — never show raw status strings like `in-progress` in the table. Always use the indicator column format (`● active`, `○ ready`, etc.).
 - Numbers in the table should be sequential across all streams (not just actionable ones) so the user can reference any stream by number.
+- **Prefer `project.json`** over parsing `plan.md` when you need structured data (stream names, statuses, types, blockers).

@@ -161,6 +161,34 @@ When the user says "parallel", read `plan.md`, show all unblocked/in-progress st
 
 ---
 
+## Script-First Operations (Zero LLM Cost)
+
+For deterministic queries, **always run scripts directly** instead of using Claude to parse markdown. Scripts live at `${CLAUDE_SKILL_DIR}/../../scripts/` (relative to any skill) or the plugin's `scripts/` directory.
+
+| User wants | Script | Example |
+|-----------|--------|---------|
+| Project status | `pm-status.sh <project>` | Streams table with indicators |
+| List all projects | `pm-list-projects.sh` | Numbered project list |
+| What's ready | `pm-next.sh <project>` | In-progress + unblocked streams |
+| What's blocked | `pm-blocked.sh <project>` | Blocked streams + their blockers |
+| Hours summary | `pm-hours.sh <project>` | Hours by stream + totals |
+| Stream details | `pm-stream-status.sh <project> <stream>` | Plan, sessions, hours for one stream |
+| Search planning files | `pm-search.sh <project> <query>` | Grep across meta branch |
+| Regenerate project.json | `pm-sync-json.sh <project>` | Rebuild from plan.md |
+
+**Script location:** Find the scripts directory relative to the skill:
+```bash
+SCRIPTS="${CLAUDE_SKILL_DIR}/../../scripts"
+# or fall back to:
+SCRIPTS="$(dirname "$(dirname "$CLAUDE_SKILL_DIR")")/scripts"
+```
+
+**When to use scripts vs Claude:**
+- Status, listing, searching, hours → always scripts (instant, free)
+- Creating, editing plans, session management → Claude (needs judgment)
+
+---
+
 ## Session Management
 
 ### Starting a Session

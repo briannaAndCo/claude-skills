@@ -107,20 +107,25 @@ Tell the user: "Stream `<stream>` is already running — attached to existing se
 
 ### 4. Determine Stream Type
 
-Read the stream's plan or status from the meta branch:
+**Prefer `project.json`** for type lookup (no parsing needed):
+
+```bash
+git -C <repo-path> show <meta-branch>:project.json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['streams'].get('<stream>',{}).get('type','feature'))"
+```
+
+**Fallback** if `project.json` is missing — read the stream's plan:
 
 ```bash
 git -C <repo-path> show <meta-branch>:streams/<stream>/plan.md 2>/dev/null
 ```
 
-Classify as **code** or **non-code**:
+Check the `> Type:` line first. If absent, classify by keywords:
 
-**Non-code indicators** (any match):
+**Non-code types** (`research`, `docs`):
 - Plan contains keywords: `research`, `investigate`, `spike`, `explore`, `documentation`, `planning`, `analysis`, `study`, `evaluation`, `comparison`, `decision`, `ADR`, `RFC`
 - Stream name starts with: `research-`, `spike-`, `docs-`, `plan-`, `adr-`, `rfc-`, `explore-`
-- Plan explicitly states `type: research`, `type: docs`, `type: planning`, or similar
 
-**Everything else is a code stream.**
+**Code types** (`feature`, `bug`, `refactor`, `ops`): everything else.
 
 If uncertain, ask: "Does this stream involve code changes, or is it research/documentation only?"
 
@@ -168,6 +173,13 @@ EOF
 - Always commit on a feature branch, never on main
 - When done, signal readiness for review
 
+## Model Selection
+Use the right model for each task type:
+- **Mechanical tasks** (1-2 files, clear specs, boilerplate): use Haiku or fast mode
+- **Integration tasks** (multi-file, pattern matching, standard features): use Sonnet
+- **Architecture/design/review** (complex decisions, cross-cutting concerns): use Opus
+Switch with /model or let the orchestrator choose.
+
 ## On Start
 1. If launched with `/stream-plan`, the planning skill will handle context gathering and planning
 2. If launched with just `claude`, read the stream plan above and begin implementation
@@ -214,6 +226,10 @@ EOF
 - Reference the repo at <repo-path> for reading code, but do not modify it
 - To read project planning files: `git -C <repo-path> show <meta-branch>:<file>`
 - Summarize findings in a deliverable document when done
+
+## Model Selection
+- **Research/exploration**: use Sonnet for broad searches, Opus for synthesis and analysis
+- **Document writing**: use Opus for drafting, Sonnet for formatting and structure
 
 ## On Start
 1. Read this stream's plan above

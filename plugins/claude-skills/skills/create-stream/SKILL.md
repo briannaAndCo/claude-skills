@@ -73,6 +73,7 @@ Use the **Write tool** to create:
 
 ```markdown
 # Plan: <stream-name>
+> Type: <feature|bug|refactor|research|ops|docs>
 
 ## Objective
 <objective or brief description>
@@ -104,18 +105,30 @@ Use the **Write tool** to create:
 **Total**: 0h 00m
 ```
 
-### 5. Update the Streams Table
+### 5. Update the Streams Table and project.json
 
-Use the **Edit tool** to add a row to the streams table in `plan.md`:
+Use the **Edit tool** to add a row to the streams table in `plan.md`. Include the Type column:
 
 - Status: `blocked` if blockers were specified, `unblocked` otherwise
+- Type: `feature` (default), `bug`, `refactor`, `research`, `ops`, or `docs` — ask the user
 - Blocked By: comma-separated list of blocker stream names, or `—`
 - Notes: the brief description
+
+Also use the **Read tool** to read `project.json`, then use the **Write tool** to update it with the new stream entry:
+
+```json
+"<stream-name>": {
+  "status": "unblocked",
+  "type": "<type>",
+  "blockedBy": [],
+  "description": "<brief description>"
+}
+```
 
 ### 6. Commit and Return
 
 ```bash
-git add streams/<stream>/ plan.md
+git add streams/<stream>/ plan.md project.json
 git commit -m "meta: add stream <stream>"
 git checkout "$CURRENT_BRANCH" 2>/dev/null || git checkout main
 git stash pop 2>/dev/null || true

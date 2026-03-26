@@ -4,6 +4,39 @@ All planning files live on the `meta` orphan branch of the project's git repo.
 
 ## Project Level
 
+### `project.json` — Machine-Readable Manifest
+
+Scripts read this file directly — no markdown parsing needed. Created by `create-project`, updated by any skill that changes project or stream state.
+
+```json
+{
+  "name": "project-name",
+  "created": "2026-03-26",
+  "repo": "git@github.com:org/repo.git",
+  "objective": "One paragraph describing the project goal",
+  "streams": {
+    "stream-name-1": {
+      "status": "unblocked",
+      "type": "feature",
+      "blockedBy": [],
+      "description": "Brief description"
+    },
+    "stream-name-2": {
+      "status": "blocked",
+      "type": "bug",
+      "blockedBy": ["stream-name-1"],
+      "description": "Brief description"
+    }
+  }
+}
+```
+
+**Stream types:** `feature` | `bug` | `refactor` | `research` | `ops` | `docs`
+
+**Keeping in sync:** Any skill that updates `plan.md` streams table MUST also update `project.json`. The scripts directory provides `pm-sync-json.sh` to regenerate `project.json` from `plan.md` if they drift.
+
+---
+
 ### `plan.md` — Master Plan
 
 ```markdown
@@ -15,11 +48,11 @@ All planning files live on the `meta` orphan branch of the project's git repo.
 
 ## Streams
 
-| Stream | Status | Blocked By | Notes |
-|--------|--------|------------|-------|
-| stream-name-1 | unblocked | — | Brief description |
-| stream-name-2 | blocked | stream-name-1 | Brief description |
-| stream-name-3 | planned | — | Brief description |
+| Stream | Status | Type | Blocked By | Notes |
+|--------|--------|------|------------|-------|
+| stream-name-1 | unblocked | feature | — | Brief description |
+| stream-name-2 | blocked | bug | stream-name-1 | Brief description |
+| stream-name-3 | planned | research | — | Brief description |
 
 ## Notes
 <any additional context>
@@ -28,6 +61,8 @@ All planning files live on the `meta` orphan branch of the project's git repo.
 The `> Repository:` line is optional — only present if a remote URL was provided.
 
 Valid statuses: `planned` | `unblocked` | `in-progress` | `blocked` | `complete` | `on-hold`
+
+Valid types: `feature` | `bug` | `refactor` | `research` | `ops` | `docs`
 
 ---
 
@@ -77,6 +112,7 @@ Valid statuses: `planned` | `unblocked` | `in-progress` | `blocked` | `complete`
 
 ```markdown
 # Plan: <stream-name>
+> Type: <feature|bug|refactor|research|ops|docs>
 
 ## Objective
 <what this stream delivers>
@@ -93,6 +129,8 @@ Valid statuses: `planned` | `unblocked` | `in-progress` | `blocked` | `complete`
 ## Notes
 <any context, links, decisions>
 ```
+
+The `> Type:` line tells scripts and the tmux status bar which color/icon to use without keyword guessing. Defaults to `feature` if omitted.
 
 ---
 
