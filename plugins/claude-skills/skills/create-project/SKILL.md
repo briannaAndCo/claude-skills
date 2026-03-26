@@ -33,8 +33,7 @@ If no git repo exists at the given path:
 
 ```bash
 mkdir -p <repo-path>
-cd <repo-path>
-git init
+git init <repo-path>
 ```
 
 If a repo already exists, use it as-is.
@@ -43,22 +42,18 @@ If a repo already exists, use it as-is.
 
 ```bash
 cd <repo-path>
-
-# Save current branch to return to later
 ORIGINAL_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
-
-# Create orphan meta branch
 git checkout --orphan meta
-
-# Remove any tracked files from the index (don't delete working tree)
 git rm -rf --cached . 2>/dev/null || true
 ```
 
 ### 4. Write Planning Files
 
-Create the following files in the repo root (on the meta branch):
+Use the **Write tool** (not Bash) to create all planning files in the repo root on the meta branch.
 
 #### `plan.md`
+
+Use the Write tool to create `<repo-path>/plan.md`:
 
 ```markdown
 # Plan: <project-name>
@@ -75,15 +70,18 @@ Create the following files in the repo root (on the meta branch):
 If initial streams were provided, populate the table:
 - Streams with no blockers get status `unblocked`
 - Streams with blockers get status `blocked`
-- Streams whose blockers are all listed but none are blocking them get status `unblocked`
 
 #### `session.md`
+
+Use the Write tool to create `<repo-path>/session.md`:
 
 ```markdown
 # Sessions: <project-name>
 ```
 
 #### `tasks.md`
+
+Use the Write tool to create `<repo-path>/tasks.md`:
 
 ```markdown
 # Tasks: <project-name>
@@ -101,56 +99,31 @@ If initial streams were provided, populate the table:
 
 #### Stream files (if initial streams provided)
 
-For each stream, create:
+For each stream, use the Write tool to create:
 
-**`streams/<stream-name>/plan.md`**
-```markdown
-# Plan: <stream-name>
+- `<repo-path>/streams/<stream-name>/plan.md` — stream plan with objective, placeholder AC, empty tasks
+- `<repo-path>/streams/<stream-name>/session.md` — empty session log
+- `<repo-path>/streams/<stream-name>/hours.md` — empty hours log with 0h total
 
-## Objective
-<stream description>
-
-## Tasks
-- [ ] Define scope and approach
-
-## Acceptance Criteria
-- TBD
-
-## Notes
-```
-
-**`streams/<stream-name>/session.md`**
-```markdown
-# Sessions: <stream-name>
-```
-
-**`streams/<stream-name>/hours.md`**
-```markdown
-# Hours: <stream-name>
-
-| Date | Duration | Notes |
-|------|----------|-------|
-
-**Total**: 0h 00m
-```
+See [references/file-formats.md](references/file-formats.md) for exact templates.
 
 ### 5. Commit and Return
 
 ```bash
-# Stage all planning files
+cd <repo-path>
 git add plan.md session.md tasks.md
 git add streams/ 2>/dev/null || true
-
-# Commit
 git commit -m "meta: initialize project — <project-name>"
+```
 
-# Return to original branch (or create main if new repo)
+Return to original branch or create main:
+
+```bash
 if [ -n "$ORIGINAL_BRANCH" ]; then
   git checkout "$ORIGINAL_BRANCH"
 else
   git checkout --orphan main
   git rm -rf --cached . 2>/dev/null || true
-  # Don't commit — leave main empty for the user
 fi
 ```
 
@@ -159,14 +132,11 @@ fi
 If the user provided a GitHub repo URL:
 
 ```bash
-# Add remote if not already set
 git remote get-url origin 2>/dev/null || git remote add origin <repo-url>
-
-# Push the meta branch
 git push -u origin meta
 ```
 
-Store the repo URL in `plan.md` by adding a line after the project name header:
+Use the **Edit tool** to add the repo URL to `plan.md` after the project name header:
 
 ```markdown
 # Plan: <project-name>
@@ -175,7 +145,7 @@ Store the repo URL in `plan.md` by adding a line after the project name header:
 
 ### 7. Register in Projects Registry
 
-Add the project to `~/.claude/projects-registry.json`:
+Use the **Read tool** to check if `~/.claude/projects-registry.json` exists. Then use the **Write tool** to create or update it:
 
 ```json
 {
@@ -186,7 +156,7 @@ Add the project to `~/.claude/projects-registry.json`:
 }
 ```
 
-If the file exists, append to the `projects` array (avoid duplicates by path). If it doesn't exist, create it with the default `scanPaths`.
+If the file exists, read it first, append to the `projects` array (avoid duplicates by path), and write back.
 
 ### 8. Confirm
 
@@ -207,6 +177,7 @@ Tell the user:
 - If the repo already has a `meta` branch, warn the user and ask before overwriting.
 - The `meta` branch is an orphan — it shares no history with code branches.
 - Stream CLAUDE.md files are NOT created at project init. They are generated dynamically when a stream is opened.
+- **Use the Write tool for creating files, Edit tool for modifying files, and Read tool for reading files.** Only use Bash for git commands and directory creation.
 
 ---
 

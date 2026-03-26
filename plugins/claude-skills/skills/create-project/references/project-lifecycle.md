@@ -2,6 +2,18 @@
 
 The full lifecycle from idea to merged code, broken into phases. Each phase is a skill or sub-skill invocation.
 
+## Tool Usage
+
+Throughout all phases, prefer dedicated tools over Bash:
+
+- **Read tool**: read files from disk or from git (via `git show meta:<file>` in Bash only when on a different branch)
+- **Write tool**: create new files
+- **Edit tool**: modify existing files
+- **Glob tool**: find files by pattern
+- **Grep tool**: search file contents
+- **Agent tool**: delegate parallel exploration, review, or research tasks to subagents
+- **Bash tool**: only for git commands, directory creation, and `gh` CLI operations
+
 ---
 
 ## Phase Overview
@@ -11,16 +23,17 @@ The full lifecycle from idea to merged code, broken into phases. Each phase is a
 2. REQUIREMENTS  → gather, discuss, define edge cases, write requirements.md
 3. DESIGN        → high-level architecture, language-specific refinement, tradeoff review
 4. DECOMPOSE     → break into streams with AC, dependencies, wave plan
-5. IMPLEMENT     → worktree per stream, plan mode, code
-6. REVIEW        → PR creation, review, feedback cycle
-7. MERGE         → merge to main, cleanup worktree, update meta
+5. STREAM DESIGN → codebase exploration, clarifying questions, refined AC, user approval
+6. IMPLEMENT     → worktree per stream, plan mode, code
+7. REVIEW        → AC verification, iterate, user-approved draft PR
+8. MERGE         → merge to main, cleanup worktree, update meta
 ```
 
 ---
 
 ## Phase 1: Create (skill: `create-project`)
 
-Already defined. Creates repo, orphan `meta` branch, registry entry.
+Already defined in SKILL.md. Creates repo, orphan `meta` branch, registry entry.
 
 **Output on meta:** `plan.md`, `session.md`, `tasks.md`
 
@@ -39,18 +52,30 @@ Turn a project objective into a concrete, testable requirements document.
    - What does success look like?
    - What are the constraints (tech stack, timeline, dependencies)?
 
-2. **Distill** — For each capability identified, define:
+2. **Research** — Launch **Explore agents** in parallel to:
+   - Investigate similar solutions, patterns, or prior art in the codebase
+   - Search for relevant standards or conventions for the problem domain
+   - Identify existing code that may be reused or extended
+
+3. **Distill** — For each capability identified, define:
    - **Behavior**: what it does (plain language)
    - **Acceptance criteria**: Given-When-Then scenarios
    - **Edge cases**: what happens when inputs are invalid, empty, concurrent, too large, missing permissions, etc.
    - **Non-requirements**: what is explicitly out of scope
 
-3. **Review** — Present requirements back to user for confirmation. Walk through edge cases one by one (per user preference). Ask:
+4. **Review** — Present requirements back to user for confirmation. Walk through edge cases one by one. Ask:
    - "Is anything missing?"
    - "Is anything over-specified?"
    - "Are there constraints I haven't captured?"
 
-4. **Commit** — Write `requirements.md` to meta branch.
+5. **Commit** — Use the **Write tool** to create `requirements.md` in the repo root. Then commit to meta:
+   ```bash
+   cd <repo-path>
+   git checkout meta
+   git add requirements.md
+   git commit -m "meta: add requirements"
+   git checkout <original-branch>
+   ```
 
 ### `requirements.md` Format
 
@@ -98,26 +123,38 @@ Produce a high-level technical design informed by requirements, refined against 
 
 ### Flow
 
-1. **Propose** — Read `requirements.md` from meta. Produce initial design:
+1. **Read context** — Use Bash to read `requirements.md` from meta: `git show meta:requirements.md`. If the repo has existing code, launch **Explore agents** in parallel to:
+   - Map existing architecture, patterns, and conventions
+   - Identify relevant types, interfaces, and abstractions
+   - Find test patterns and CI/CD configuration
+
+2. **Propose** — Produce initial design:
    - System architecture (components, data flow, boundaries)
    - Data model (entities, relationships, storage)
    - API surface (if applicable)
    - Key technical decisions with rationale
 
-2. **Refine** — Apply language/framework best practices:
-   - Read existing codebase for conventions (if repo has code)
-   - Check against known patterns for the stack (e.g., Rust error handling, React state management)
+3. **Refine** — Apply language/framework best practices:
+   - Launch an **Agent** to search the web for current best practices for the chosen stack
+   - Check against codebase conventions found by Explore agents
    - Identify where the design violates idioms or introduces unnecessary complexity
    - Suggest simplifications
 
-3. **Tradeoffs** — Surface decisions that have meaningful tradeoffs. Present each as:
+4. **Tradeoffs** — Surface decisions that have meaningful tradeoffs. Present each as:
    - **Decision**: what needs to be decided
    - **Options**: 2-3 concrete approaches
    - **Tradeoffs**: pros/cons of each (performance, complexity, maintainability, flexibility)
    - **Recommendation**: which option and why
    - Walk through one at a time, get user's call before proceeding.
 
-4. **Commit** — Write `design.md` to meta branch.
+5. **Commit** — Use the **Write tool** to create `design.md`, then commit to meta:
+   ```bash
+   cd <repo-path>
+   git checkout meta
+   git add design.md
+   git commit -m "meta: add design"
+   git checkout <original-branch>
+   ```
 
 ### `design.md` Format
 
@@ -161,37 +198,51 @@ Produce a high-level technical design informed by requirements, refined against 
 ## Phase 4: Decompose (skill: `project-decompose`)
 
 ### Purpose
-Break the design into implementable streams with acceptance criteria, dependencies, and a wave plan.
+Break the design into implementable streams with high-level acceptance criteria, dependencies, and a wave plan.
 
 ### Flow
 
-1. **Identify streams** — Read `requirements.md` and `design.md` from meta. Map capabilities and components to streams:
+1. **Read context** — Use Bash to read from meta:
+   ```bash
+   git show meta:requirements.md
+   git show meta:design.md
+   git show meta:plan.md
+   ```
+
+2. **Identify streams** — Map capabilities and components to streams:
    - Each stream should be independently implementable and reviewable
    - Each stream should take no more than a few sessions to complete
    - Prefer vertical slices (end-to-end through a feature) over horizontal layers
 
-2. **Define high-level AC per stream** — For each stream:
+3. **Define high-level AC per stream** — For each stream:
    - Pull relevant acceptance criteria from requirements (high-level, behavioral)
    - Brief description of what "done" means
    - Do NOT go into implementation detail here — that happens in the stream design pass (Phase 5)
 
-3. **Map dependencies** — Identify which streams block others:
+4. **Map dependencies** — Identify which streams block others:
    - Direct: stream B needs stream A's code/types/schema
    - Data: stream B needs stream A's migrations or seed data
    - API: stream B calls endpoints/functions defined in stream A
 
-4. **Wave plan** — Group streams into waves:
+5. **Wave plan** — Group streams into waves:
    - Wave 1: streams with no blockers
    - Wave N: streams whose blockers are all in earlier waves
    - Within a wave, all streams are independent and can run in parallel
 
-5. **Review with user** — Present the decomposition:
+6. **Review with user** — Present the decomposition:
    - Stream list with AC summaries
    - Dependency graph
    - Wave plan
    - Ask: "Does this grouping make sense? Should any streams be split or merged?"
 
-6. **Commit** — Update `plan.md` with stream table and wave plan. Create `streams/<name>/plan.md` for each stream. All on meta branch.
+7. **Commit** — Use the **Edit tool** to update `plan.md` and the **Write tool** to create each `streams/<name>/plan.md`. Then commit to meta:
+   ```bash
+   cd <repo-path>
+   git checkout meta
+   git add plan.md streams/
+   git commit -m "meta: decompose into streams with wave plan"
+   git checkout <original-branch>
+   ```
 
 ### Updated `plan.md` Format (after decomposition)
 
@@ -230,7 +281,7 @@ Break the design into implementable streams with acceptance criteria, dependenci
 | Capability 2 | stream-c |
 ```
 
-### Stream `plan.md` Format (after decomposition)
+### Stream `plan.md` Format (after decomposition — high-level)
 
 ```markdown
 # Plan: <stream-name>
@@ -239,14 +290,8 @@ Break the design into implementable streams with acceptance criteria, dependenci
 <what this stream delivers>
 
 ## Acceptance Criteria
-- [ ] Given <precondition>, when <action>, then <result>
-- [ ] <implementation criterion>
-- [ ] Tests pass, no regressions
-- [ ] PR reviewed and approved
-
-## Tasks
-- [ ] <task 1>
-- [ ] <task 2>
+- [ ] <high-level behavioral criterion>
+- [ ] <high-level behavioral criterion>
 
 ## Dependencies
 - Blocked by: <stream-names or "none">
@@ -257,36 +302,28 @@ Break the design into implementable streams with acceptance criteria, dependenci
 
 ---
 
-## Phase 5: Stream Design & Implement (skill: `open-stream`)
+## Phase 5: Stream Design (skill: `open-stream`, step 1)
 
 ### Purpose
-Design a stream at implementation level, get user approval, then open it for work in an isolated worktree.
-
-### Worktree Convention
-
-All worktrees live in a standardized location relative to the repo:
-
-```
-<repo-root>/.worktrees/<stream-name>/
-```
-
-Add `.worktrees` to `.gitignore` in the repo.
+Design a stream at implementation level, get user approval before any code is written.
 
 ### Flow
 
 #### Step 1: Check Readiness
 
-Read `plan.md` from meta. Verify the stream is `unblocked` or `in-progress`. If blocked, tell the user what's blocking it and stop.
+Use Bash to read `plan.md` from meta: `git show meta:plan.md`. Verify the stream is `unblocked` or `in-progress`. If blocked, tell the user what's blocking it and stop.
 
 #### Step 2: Stream Design Pass
 
-This is where the high-level project AC gets refined into a low-level, implementation-ready stream plan. Read `requirements.md`, `design.md`, and the stream's `plan.md` from meta, plus the existing codebase.
+Read `requirements.md`, `design.md`, and the stream's `plan.md` from meta via Bash (`git show meta:<path>`).
 
-**2a. Codebase Exploration** — Understand what exists:
-- Read existing code patterns, conventions, and abstractions relevant to this stream
+**2a. Codebase Exploration** — Launch 2-3 **Explore agents** in parallel to:
+- Map existing code patterns, conventions, and abstractions relevant to this stream
 - Identify integration points with code from already-merged streams
-- Note any existing tests, types, or utilities to build on
-- List key files that will be read or modified
+- Find existing tests, types, or utilities to build on
+- Return a list of key files that will be read or modified
+
+After agents return, use the **Read tool** to read all key files they identified.
 
 **2b. Clarifying Questions** — Surface ambiguities before planning:
 - Edge cases: invalid inputs, empty states, concurrent access, large data, missing permissions
@@ -324,61 +361,15 @@ This is where the high-level project AC gets refined into a low-level, implement
 
 #### Step 3: Commit Stream Plan to Meta
 
-Update `streams/<name>/plan.md` on meta with the refined plan from Step 2.
-
-#### Step 4: Create Worktree
+Use the **Write tool** to update `streams/<name>/plan.md` with the refined plan. Then commit:
 
 ```bash
-cd <repo-root>
-git worktree add .worktrees/<stream-name> -b stream/<stream-name> main
+cd <repo-path>
+git checkout meta
+git add streams/<name>/plan.md
+git commit -m "meta: refined stream plan — <stream-name>"
+git checkout <original-branch>
 ```
-
-#### Step 5: Generate CLAUDE.md
-
-Dynamically build from current meta state:
-
-```markdown
-# Stream: <stream-name>
-
-## Project
-<project name and objective from plan.md>
-
-## This Stream
-<objective, approach, and refined AC from streams/<name>/plan.md>
-
-## Task Plan
-<ordered task list from stream plan>
-
-## Context
-- Worktree: <repo>/.worktrees/<stream-name>/
-- Branch: stream/<stream-name>
-- Base: main
-- Key files: <list from design pass>
-
-## Instructions
-- Work only within this worktree
-- Commit on branch stream/<stream-name>
-- Do not modify files outside this stream's scope
-- Follow codebase conventions identified in the design pass
-- When done, mark all AC as checked in streams/<name>/plan.md on meta
-```
-
-Write to `<worktree-root>/CLAUDE.md`.
-
-#### Step 6: Update Meta
-
-Set stream status to `in-progress` in `plan.md` on meta branch.
-
-#### Step 7: Launch
-
-Open Claude session in the worktree directory (via terminal tab or tmux window).
-
-### Implementation Guidelines
-
-- Start in plan mode (`--permission-mode plan`)
-- Keep implementation to 30-minute blocks aligned with task plan
-- Commit frequently on the stream branch — one commit per task when practical
-- When all AC are met, signal readiness for review
 
 ### Refined Stream `plan.md` Format (after design pass)
 
@@ -421,78 +412,210 @@ Open Claude session in the worktree directory (via terminal tab or tmux window).
 
 ---
 
-## Phase 6: Review (skill: `review-stream`)
+## Phase 6: Implement (skill: `open-stream`, step 2)
+
+### Purpose
+Open the stream for implementation in an isolated worktree after the design pass is approved.
+
+### Worktree Convention
+
+All worktrees live in a standardized location relative to the repo:
+
+```
+<repo-root>/.worktrees/<stream-name>/
+```
+
+Use **Grep tool** to check if `.worktrees` is already in `.gitignore`. If not, use the **Edit tool** to add it.
+
+### Flow
+
+#### Step 1: Create Worktree
+
+```bash
+cd <repo-root>
+git worktree add .worktrees/<stream-name> -b stream/<stream-name> main
+```
+
+#### Step 2: Generate CLAUDE.md
+
+Use the **Write tool** to create `<worktree-root>/CLAUDE.md`, dynamically built from current meta state:
+
+```markdown
+# Stream: <stream-name>
+
+## Project
+<project name and objective from plan.md>
+
+## This Stream
+<objective, approach, and refined AC from streams/<name>/plan.md>
+
+## Task Plan
+<ordered task list from stream plan>
+
+## Context
+- Worktree: <repo>/.worktrees/<stream-name>/
+- Branch: stream/<stream-name>
+- Base: main
+- Key files: <list from design pass>
+
+## Instructions
+- Work only within this worktree
+- Commit on branch stream/<stream-name>
+- Do not modify files outside this stream's scope
+- Follow codebase conventions identified in the design pass
+- When done, mark all AC as checked in streams/<name>/plan.md on meta
+```
+
+#### Step 3: Update Meta
+
+Use the **Edit tool** to set stream status to `in-progress` in `plan.md` on meta branch, then commit:
+
+```bash
+cd <repo-path>
+git checkout meta
+git add plan.md
+git commit -m "meta: stream in-progress — <stream-name>"
+git checkout <original-branch>
+```
+
+#### Step 4: Launch
+
+Open Claude session in the worktree directory (via terminal tab or tmux window).
+
+### Implementation Guidelines
+
+- Start in plan mode (`--permission-mode plan`)
+- Keep implementation to 30-minute blocks aligned with task plan
+- Commit frequently on the stream branch — one commit per task when practical
+- When all AC are met, signal readiness for review
+
+---
+
+## Phase 7: Review (skill: `review-stream`)
 
 ### Purpose
 Review the stream's work against its AC, iterate until passing, then create a draft PR with user approval.
 
 ### Flow
 
-1. **Review against AC** — For each acceptance criterion:
-   - Verify it's met by reading the code
-   - Present findings one at a time (per user preference)
-   - Flag gaps, suggest fixes
+#### Step 1: Review Against AC
 
-2. **Iterate** — If changes needed:
-   - Make fixes in the worktree
-   - Commit on the stream branch
-   - Re-review until all AC pass
+Launch 3 **review agents** in parallel, each focused on a different aspect:
 
-3. **Request approval to create PR** — When all AC pass, present a summary:
-   - List of commits on the stream branch
-   - AC checklist (all checked)
-   - Any notes or caveats
-   - Ask: "Ready to create a draft PR?"
-   - **Do not create a PR until the user explicitly approves.**
+1. **AC verification agent** — For each acceptance criterion in the stream's `plan.md`:
+   - Read the relevant code using Read/Grep/Glob tools
+   - Verify the criterion is met
+   - Return pass/fail with evidence (file paths, line numbers)
 
-4. **Create draft PR** (only after user approval):
-   ```bash
-   cd <worktree>
-   git push -u origin stream/<stream-name>
-   gh pr create --draft \
-     --title "<stream-name>: <brief description>" \
-     --body "<AC checklist from stream plan.md>"
-   ```
+2. **Quality agent** — Check for:
+   - Simplicity, DRY, elegance
+   - Codebase convention compliance
+   - No unnecessary complexity or scope creep
 
-5. **Mark ready** — Only when the user explicitly requests it:
-   ```bash
-   gh pr ready
-   ```
+3. **Correctness agent** — Check for:
+   - Bugs and edge case handling
+   - Error handling completeness
+   - Integration correctness with existing code
+
+Consolidate findings. Present issues **one at a time** to the user (highest severity first). For each issue, include:
+- What the issue is
+- Where it is (file:line)
+- Suggested fix
+- Confidence level (skip anything below 80%)
+
+#### Step 2: Iterate
+
+If changes needed:
+- Make fixes in the worktree using **Edit tool**
+- Commit on the stream branch
+- Re-run review agents on changed files until all AC pass
+
+#### Step 3: Request Approval to Create PR
+
+When all AC pass, present a summary:
+- List of commits on the stream branch (`git log main..stream/<stream-name> --oneline`)
+- AC checklist (all checked)
+- Any notes or caveats
+- Ask: "Ready to create a draft PR?"
+- **Do not create a PR until the user explicitly approves.**
+
+#### Step 4: Create Draft PR (only after user approval)
+
+```bash
+cd <worktree>
+git push -u origin stream/<stream-name>
+```
+
+Use Bash to create the PR with `gh`:
+
+```bash
+gh pr create --draft \
+  --title "<stream-name>: <brief description>" \
+  --body "<AC checklist from stream plan.md>"
+```
+
+#### Step 5: Mark Ready
+
+Only when the user explicitly requests it:
+
+```bash
+gh pr ready
+```
 
 ---
 
-## Phase 7: Merge (skill: `merge-stream`)
+## Phase 8: Merge (skill: `merge-stream`)
 
 ### Purpose
 Merge the stream's PR, clean up, and update project state.
 
 ### Flow
 
-1. **Merge PR**:
-   ```bash
-   gh pr merge --squash
-   ```
+#### Step 1: Merge PR
 
-2. **Clean up worktree**:
-   ```bash
-   cd <repo-root>
-   git worktree remove .worktrees/<stream-name>
-   git branch -d stream/<stream-name>
-   ```
+```bash
+gh pr merge --squash
+```
 
-3. **Update meta** — On the meta branch:
-   - Set stream status to `complete` in `plan.md`
-   - Check if any blocked streams are now unblocked (all their blockers are `complete`)
-   - Update those streams to `unblocked`
+#### Step 2: Clean Up Worktree
 
-4. **Notify** — Tell the user:
-   - Which stream was merged
-   - Which streams are now unblocked
-   - What the next wave looks like
+```bash
+cd <repo-root>
+git worktree remove .worktrees/<stream-name>
+git branch -d stream/<stream-name>
+```
 
-5. **Rebase remaining worktrees** — For any active worktrees on other streams:
-   ```bash
-   cd <worktree>
-   git rebase main
-   ```
-   Warn the user if conflicts arise.
+#### Step 3: Update Meta
+
+Use the **Edit tool** on `plan.md` (on meta branch) to:
+- Set stream status to `complete`
+- Check if any blocked streams are now unblocked (all their blockers are `complete`)
+- Update those streams to `unblocked`
+
+Then commit:
+
+```bash
+cd <repo-path>
+git checkout meta
+git add plan.md
+git commit -m "meta: stream complete — <stream-name>"
+git checkout <original-branch>
+```
+
+#### Step 4: Notify
+
+Tell the user:
+- Which stream was merged
+- Which streams are now unblocked
+- What the next wave looks like
+
+#### Step 5: Rebase Remaining Worktrees
+
+Use Bash to list active worktrees: `git worktree list`. For any active stream worktrees:
+
+```bash
+cd <worktree>
+git rebase main
+```
+
+Warn the user if conflicts arise — do not force-resolve.
