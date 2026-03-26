@@ -1,7 +1,7 @@
 ---
 name: project-manager
 description: This skill should be used when the user asks to "open projects", "manage projects", "new project", "create project", "open a stream", "start a session", "log time", "track time", "project manager", "what projects do I have", "show my projects", "open tmux", "start parallel streams", "run streams in parallel", "set up tmux for project", "work on multiple streams", or mentions working on an epic, story, ticket, or stream. Manages structured project and stream workspaces with session tracking, time logging, and tmux-based parallel Claude instances.
-version: 1.3.0
+version: 1.4.0
 disable-model-invocation: true
 ---
 
@@ -21,20 +21,24 @@ Manages a structured workspace of projects (epics) and streams (stories/tickets)
 
 ## Configuration
 
-Read config with:
+Read config from the projects registry:
+
+```bash
+cat ~/.claude/projects-registry.json
+```
+
+The registry format:
 
 ```json
 {
-  "projects_root": "~/projects",
-  "repos": {
-    "<project-name>": "git@github.com:<org>/<repo>.git"
-  }
+  "projects": [
+    { "path": "<absolute-repo-path>", "name": "<project-name>", "metaBranch": "meta/<project-slug>" }
+  ],
+  "scanPaths": ["~/projects", "~/repos"]
 }
 ```
 
-Default `projects_root` is `~/projects`. If the user specifies a different location, write or update the config file.
-
-The `repos` map is optional. When present, the project's tracking files are synced to a `meta/<project-slug>` branch on that remote after every significant update (see [Tracking Branch](#tracking-branch)).
+Each project entry has a `path` (repo on disk), `name`, and `metaBranch`. The `scanPaths` array lists directories to search for project repos. If the registry doesn't exist, fall back to scanning `~/projects`.
 
 ---
 
@@ -43,7 +47,7 @@ The `repos` map is optional. When present, the project's tracking files are sync
 When the skill is invoked, immediately run these Bash tool calls in parallel:
 
 ```bash
-cat ~/.claude-projects-config 2>/dev/null || echo '{"projects_root": "~/projects"}'
+cat ~/.claude/projects-registry.json 2>/dev/null || echo '{"projects_root": "~/projects"}'
 ```
 
 ```bash
@@ -76,7 +80,7 @@ If no projects exist, go straight to creating one.
 4. Ask for an optional GitHub repo URL (for tracking branch sync — can be added later)
 5. Create the project structure (see [File Structure](#file-structure))
 6. Populate `plan.md` with the objective, planned streams, and empty dependency/status table
-7. If a repo URL was provided, add it to `~/.claude-projects-config` under `repos`
+7. If a repo URL was provided, add it to `~/.claude/projects-registry.json` under `repos`
 8. Confirm creation, then offer to open it in tmux: `pt open <project-name>`
 
 ---
@@ -243,7 +247,7 @@ Push to `meta/<project-slug>` after any of:
 
 ### How to Push
 
-1. Look up the repo URL for this project in `~/.claude-projects-config` under `repos`
+1. Look up the repo URL for this project in `~/.claude/projects-registry.json` under `repos`
 2. If no URL is configured, skip silently
 3. Resolve the meta branch name (see above)
 4. Set up a temporary clone or use the project's worktree if available:

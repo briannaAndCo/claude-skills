@@ -1,154 +1,130 @@
 ---
 name: review
 description: This skill should be used when the user asks to "review", "review this", "review the code", "review stream", "check the code", "look over this", "audit this", or mentions reviewing files, checking against acceptance criteria, or validating a stream's work before marking it complete.
-version: 1.0.0
+version: 2.0.0
 ---
 
 # Review
 
-Reviews code against the active stream's acceptance criteria, best practices, and edge conditions. Ensures all files have tests covering main functionality.
+Reviews code written this session against the stream's plan, acceptance criteria, standards, and edge conditions. Presents findings interactively for triage — fix, defer, or skip each issue.
 
 ---
 
 ## Step 1: Gather Context
 
-If inside a stream (stream directory is known), read:
+Read the stream plan from the meta branch:
 
 ```bash
-cat <stream-plan-path>/plan.md
+git show meta/<project-slug>:streams/<stream-name>/plan.md
 ```
 
-Extract:
-- **Acceptance Criteria** (the AC checklist)
-- **Objective** (what this stream is supposed to do)
+Find `<stream-name>` from the current branch name (e.g. `stream/<stream-name>`). If no stream context, ask the user: "What are the acceptance criteria or goals I should review against?"
 
-If the stream is a sub-stream, also read the parent stream's `plan.md` for broader context.
+Also read:
 
-If no stream context is available, ask the user: "What are the acceptance criteria or goals I should review against?"
+```bash
+git diff main..HEAD --name-only
+```
+
+Read every source file touched or created this session, plus corresponding test files.
 
 ---
 
-## Step 2: Discover Files
+## Step 2: Review Dimensions
 
-Find all source files in scope:
+For each file in the diff, evaluate across all five dimensions:
 
-```bash
-find <repo-path>/src -type f -name "*.ts" -o -name "*.tsx" | sort
-```
+### 2a. Acceptance Criteria Compliance
 
-Also find existing test files:
+Map each AC item from the plan directly to the code. For each:
+- Is it implemented? If not, is the gap intentional (deferred) or an omission?
+- Is it implemented correctly, or is there a subtle mismatch between intent and code?
 
-```bash
-find <repo-path>/src -type f -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" -o -name "*.spec.tsx" | sort
-```
+### 2b. Task List Completion
 
-Read each source file before reviewing it.
+Go through the `## Tasks` checklist in the plan. For each task:
+- Implemented in full, partially, or missing?
+- Call out partials explicitly — a field that exists with no builder is partial, not complete.
 
----
+### 2c. Correctness and Edge Cases
 
-## Step 3: Review Each File
-
-For every source file, evaluate all four dimensions:
-
-### 3a. Acceptance Criteria
-Go through each AC item from the plan. For each one, determine:
-- **Pass** — the code satisfies it
-- **Fail** — the code does not satisfy it
-- **Partial** — partially addressed, needs more work
-- **N/A** — not applicable to this file
-
-### 3b. Best Practices
-Check for language- and framework-appropriate best practices. For TypeScript/React Native:
-- Types are strict (no implicit `any`, no type assertions without justification)
-- No magic numbers or strings — use named constants
-- Pure functions where possible; side effects are isolated
-- Exported items are correctly typed
-- Naming is clear and consistent (camelCase variables, PascalCase types)
-- No dead code or unused imports
-- File does one thing (single responsibility)
-
-### 3c. Edge Conditions
-Look for unhandled scenarios:
-- Null / undefined inputs
-- Empty arrays, zero-length strings
-- Integer overflow or boundary values (e.g., colorIndex wrapping)
+Look for:
+- Silent failure modes (unwrap_or_default on data that came from the DB, etc.)
+- Contract violations not enforced at the API boundary (doc says "must be X" but code doesn't assert it)
+- Caller-supplied parameters that duplicate or can contradict DB state
+- Functions that can't distinguish "not found" from "already done"
+- Queries missing a scope filter that will break in a multi-tenant / multi-project scenario
 - Async race conditions or missing await
-- SQLite type coercions (e.g., is_starred as 0|1 vs boolean)
 - Off-by-one errors in pagination or index math
-- Behavior at the first entry (no previous entry to derive colorIndex from)
 
-### 3d. Tests
-For each source file:
-- Does a corresponding test file exist?
-- If yes — do the tests cover the main functionality (happy path + key edge cases)?
-- If no — flag it as **missing tests**
+### 2d. Standards
 
----
+- Positional column indices in row mappers — fragile if SELECT order changes
+- Inconsistent error propagation (some paths propagate, others swallow)
+- Public API surface: are the right things public? Are internals leaking?
+- Test helper duplication across modules (same `setup()` written N times)
 
-## Step 4: Output the Review
+### 2e. Reading Comprehension
 
-Present findings in this structure:
-
-```
-## Review: <stream-name>
-
-### Acceptance Criteria
-| # | Criterion | Status | Notes |
-|---|-----------|--------|-------|
-| 1 | Entry type exported and agreed upon | ✅ Pass | |
-| 2 | All fields required by other streams are present | ✅ Pass | |
-| 3 | Schema documented and versioned (migration v1) | ✅ Pass | |
-
-### File Reviews
-
-#### src/types/Entry.ts
-**Best Practices**
-- ✅ ...
-- ⚠️ ...
-- ❌ ...
-
-**Edge Conditions**
-- ⚠️ `colorIndex` wrapping: `rowToEntry` does not validate `color_index >= 0` — a negative value from DB would produce unexpected palette lookups
-- ...
-
-**Tests**
-- ❌ No test file found — missing coverage for `rowToEntry`, `entryToRow`, and round-trip mapping
+- Does the doc comment accurately describe what the function does?
+- Does the function name match its behavior?
+- Are comments that explain *why* present where the code is non-obvious?
+- Are there misleading comments (e.g. "idempotent-safe" on something that can't distinguish not-found from already-done)?
 
 ---
 
-#### src/db/schema.ts
-...
-```
+## Step 3: Classify Findings
 
-Use:
-- ✅ for passing / no issue
-- ⚠️ for a concern worth addressing
-- ❌ for a clear problem or missing requirement
+Collect all findings. Classify each by severity:
 
----
-
-## Step 5: Summary & Next Steps
-
-After all file reviews, output:
-
-```
-### Summary
-- X of Y acceptance criteria passing
-- Z issues found (A ❌ critical, B ⚠️ warnings)
-- N files missing tests
-
-### Recommended Actions
-1. ...
-2. ...
-```
-
-Then ask: "Want me to fix the issues and write the missing tests?"
+- **Critical** — data loss, silent corruption, or AC violated in a way that would fail a demo
+- **Design** — structural issues that will cause pain when the next stream builds on this
+- **Minor** — style, robustness, test coverage gaps
+- **AC gaps** — plan tasks partially implemented or deferred (call out which)
 
 ---
 
-## Notes
+## Step 4: Interactive Triage
 
-- Do not rewrite code during the review — only report findings
-- If the user says "fix it" or "write the tests" after the review, proceed to implement
-- Tests should live alongside source files: `src/types/Entry.test.ts`, `src/db/schema.test.ts`, etc.
-- Test framework default: **Jest** (standard for React Native projects)
+Present findings **one at a time** — Critical first, then Design, then Minor, then AC gaps.
+
+For each issue, show:
+
+```
+[N/Total] <Severity> — <short title>
+<file:line if applicable>
+
+<2-4 sentence description of the problem and why it matters>
+
+Fix now / Defer / Skip?
+```
+
+Wait for the user to respond before moving to the next issue. Accept shorthand:
+- `f` or `fix` → fix it immediately, then continue to the next issue
+- `d` or `defer` → note it as deferred, continue
+- `s` or `skip` → drop it, continue
+- `?` → explain the issue in more depth before deciding
+
+When the user chooses **fix**, make the change, show a brief diff or description of what changed, confirm it compiles/tests pass if applicable, then move on.
+
+---
+
+## Step 5: Summary
+
+After all issues are triaged, print a final summary table:
+
+| # | Title | Severity | Disposition |
+|---|-------|----------|-------------|
+| 1 | ...   | Critical | Fixed       |
+| 2 | ...   | Design   | Deferred    |
+
+End with one sentence: overall confidence in the stream output and any remaining risk.
+
+---
+
+## Important Notes
+
+- Do not rewrite code during the review analysis — only report findings. Fix only when the user says `f`/`fix`.
+- If the user says "fix all" or "fix everything", proceed through fixes in severity order, confirming each change briefly.
+- Tests should live alongside source files (e.g. `src/types/Entry.test.ts`).
+- If there are no findings, say so — don't manufacture issues.
