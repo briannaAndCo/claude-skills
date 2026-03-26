@@ -42,156 +42,49 @@ Already defined in SKILL.md. Creates repo, orphan `meta` branch, registry entry.
 ## Phase 2: Requirements (skill: `project-requirements`)
 
 ### Purpose
-Turn a project objective into a concrete, testable requirements document.
+Turn source documents, typed context, and codebase exploration into a structured, testable requirements document with EARS syntax, terminology glossary, and decision log.
 
-### Flow
+**See `skills/project-requirements/SKILL.md` for the full flow.**
 
-1. **Discuss** — Conversational exploration with the user:
-   - What problem is being solved?
-   - Who are the users/stakeholders?
-   - What does success look like?
-   - What are the constraints (tech stack, timeline, dependencies)?
+### Summary
 
-2. **Research** — Launch **Explore agents** in parallel to:
-   - Investigate similar solutions, patterns, or prior art in the codebase
-   - Search for relevant standards or conventions for the problem domain
-   - Identify existing code that may be reused or extended
+1. **Gather source material** — documents (file paths), typed input, or both. Optionally explore existing codebase.
+2. **Analyze** — two phases:
+   - Phase 1: Extract problem, actors, capabilities, constraints, terminology (confirm with user)
+   - Phase 2: Three parallel agents — Gap Analyst, Conflict & Ambiguity Detector, Edge Case & Risk Scanner
+3. **Surface questions** — one at a time: conflicts, critical gaps, ambiguous terms, naming, scope, edge cases, non-functional requirements
+4. **Define capabilities** — structured with EARS syntax (event-driven, state-driven, ubiquitous, optional, unwanted behavior), AC, edge cases, not-included (one at a time)
+5. **Establish terminology** — glossary with canonical names, definitions, aliases (one at a time)
+6. **Adversarial self-review** — critical review agent checks testability, circular deps, completeness
+7. **Compile and review** — section by section with user (one at a time)
+8. **Commit** — `requirements.md` to meta
 
-3. **Distill** — For each capability identified, define:
-   - **Behavior**: what it does (plain language)
-   - **Acceptance criteria**: Given-When-Then scenarios
-   - **Edge cases**: what happens when inputs are invalid, empty, concurrent, too large, missing permissions, etc.
-   - **Non-requirements**: what is explicitly out of scope
+### Output: `requirements.md`
 
-4. **Review** — Present requirements back to user for confirmation. Walk through edge cases one by one. Ask:
-   - "Is anything missing?"
-   - "Is anything over-specified?"
-   - "Are there constraints I haven't captured?"
-
-5. **Commit** — Use the **Write tool** to create `requirements.md` in the repo root. Then commit to meta:
-   ```bash
-   cd <repo-path>
-   git checkout meta
-   git add requirements.md
-   git commit -m "meta: add requirements"
-   git checkout <original-branch>
-   ```
-
-### `requirements.md` Format
-
-```markdown
-# Requirements: <project-name>
-
-## Problem Statement
-<what problem this project solves and for whom>
-
-## Constraints
-- <tech stack, timeline, external dependencies, etc.>
-
-## Capabilities
-
-### 1. <Capability Name>
-
-**Behavior**: <plain language description>
-
-**Acceptance Criteria**:
-- Given <precondition>, when <action>, then <expected result>
-- Given <precondition>, when <action>, then <expected result>
-
-**Edge Cases**:
-- <scenario>: <expected behavior>
-- <scenario>: <expected behavior>
+Contains: Problem Statement, Actors, Constraints, Capabilities (CAP-1..N with EARS requirements, AC, edge cases), Non-Requirements, Terminology glossary, Decision Log, Source Material list, Open Questions.
 
 ---
 
-### 2. <Capability Name>
-...
-
-## Non-Requirements
-- <what is explicitly out of scope>
-
-## Open Questions
-- <unresolved items to revisit>
-```
-
----
-
-## Phase 3: Design (skill: `project-design`)
+## Phase 3: Design (skill: `project-plan`)
 
 ### Purpose
-Produce a high-level technical design informed by requirements, refined against language/framework best practices, with tradeoffs surfaced to the user.
+Produce a high-level design with architecture, use cases, workflows, enforceable guiding principles, and mandatory stack guidelines. The guiding principles become the contract that all stream plans and reviews verify against.
 
-### Flow
+**See `skills/project-plan/SKILL.md` for the full flow.**
 
-1. **Read context** — Use Bash to read `requirements.md` from meta: `git show meta:requirements.md`. If the repo has existing code, launch **Explore agents** in parallel to:
-   - Map existing architecture, patterns, and conventions
-   - Identify relevant types, interfaces, and abstractions
-   - Find test patterns and CI/CD configuration
+### Summary
 
-2. **Propose** — Produce initial design:
-   - System architecture (components, data flow, boundaries)
-   - Data model (entities, relationships, storage)
-   - API surface (if applicable)
-   - Key technical decisions with rationale
+1. **Read context** — requirements from meta, existing codebase (architecture, docs, conventions)
+2. **Use cases & workflows** — actors, interactions, end-to-end flows, boundaries (one question at a time)
+3. **Architecture** — components, boundaries, data model, data flow, API surface (one component at a time)
+4. **Guiding principles** — language-agnostic, enforceable rules with ID, statement, rationale, verification (one principle at a time)
+5. **Stack guidelines** — always performed; discover existing conventions, surface discrepancies between docs and code, research stack best practices, define stack-specific guidelines mapped to guiding principles
+6. **Technical decisions** — remaining tradeoffs (one at a time)
+7. **Commit** — `design.md` to meta
 
-3. **Refine** — Apply language/framework best practices:
-   - Launch an **Agent** to search the web for current best practices for the chosen stack
-   - Check against codebase conventions found by Explore agents
-   - Identify where the design violates idioms or introduces unnecessary complexity
-   - Suggest simplifications
+### Output: `design.md`
 
-4. **Tradeoffs** — Surface decisions that have meaningful tradeoffs. Present each as:
-   - **Decision**: what needs to be decided
-   - **Options**: 2-3 concrete approaches
-   - **Tradeoffs**: pros/cons of each (performance, complexity, maintainability, flexibility)
-   - **Recommendation**: which option and why
-   - Walk through one at a time, get user's call before proceeding.
-
-5. **Commit** — Use the **Write tool** to create `design.md`, then commit to meta:
-   ```bash
-   cd <repo-path>
-   git checkout meta
-   git add design.md
-   git commit -m "meta: add design"
-   git checkout <original-branch>
-   ```
-
-### `design.md` Format
-
-```markdown
-# Design: <project-name>
-
-## Architecture
-
-### Overview
-<high-level description of the system>
-
-### Components
-<component diagram or description — what are the major pieces and how do they connect>
-
-### Data Model
-<entities, relationships, storage approach>
-
-### API Surface
-<endpoints, commands, events — whatever the system's interface is>
-
-## Technical Decisions
-
-### 1. <Decision Title>
-- **Context**: <why this decision matters>
-- **Decision**: <what was decided>
-- **Alternatives considered**: <what else was evaluated>
-- **Rationale**: <why this option was chosen>
-
-### 2. <Decision Title>
-...
-
-## Language & Framework Considerations
-<patterns, idioms, and conventions applied from the chosen stack>
-
-## Risks
-- <known risks and mitigation strategies>
-```
+Contains: Use Cases, Architecture, Guiding Principles (GP-1..N), Stack Guidelines (SG-1..N), Technical Decisions, Risks.
 
 ---
 
@@ -302,113 +195,31 @@ Break the design into implementable streams with high-level acceptance criteria,
 
 ---
 
-## Phase 5: Stream Design (skill: `open-stream`, step 1)
+## Phase 5: Stream Design (skill: `stream-plan`)
 
 ### Purpose
-Design a stream at implementation level, get user approval before any code is written.
+Design a stream at implementation level with guiding principle compliance, front-loaded quality checks, and best practices. Get user approval before any code is written. All questions are asked one at a time.
 
-### Flow
+**See `skills/stream-plan/SKILL.md` for the full flow.**
 
-#### Step 1: Check Readiness
+### Summary
 
-Use Bash to read `plan.md` from meta: `git show meta:plan.md`. Verify the stream is `unblocked` or `in-progress`. If blocked, tell the user what's blocking it and stop.
+1. **Read context** — design.md (guiding principles, stack guidelines), requirements.md, stream's plan.md from meta. Verify stream is unblocked.
+2. **Parallel discovery** — 3 agents (modeled after review-stream's 3-agent pattern):
+   - Codebase Explorer: patterns, integration points, existing GP implementations
+   - Principle Compliance Planner: which GPs apply, how to satisfy each, risk areas
+   - Best Practices Researcher: domain-specific practices filtered through guiding principles
+3. **Surface questions** — one at a time: principle conflicts, scope, integration, errors, edge cases, performance, backward compatibility
+4. **Architecture & approach** — files, patterns, data flow, integration (options one at a time)
+5. **Quality checklist** — front-loads review concerns: simplicity, conventions, scope, errors, edge cases, tests (one category at a time)
+6. **Refine AC** — implementation-level criteria including GP compliance
+7. **Task breakdown** — commit-sized tasks with GP/quality annotations
+8. **Review plan with user** — section by section, explicit approval on each
+9. **Commit** — refined stream plan.md to meta
 
-#### Step 2: Stream Design Pass
+### Output: Refined `streams/<name>/plan.md`
 
-Read `requirements.md`, `design.md`, and the stream's `plan.md` from meta via Bash (`git show meta:<path>`).
-
-**2a. Codebase Exploration** — Launch 2-3 **Explore agents** in parallel to:
-- Map existing code patterns, conventions, and abstractions relevant to this stream
-- Identify integration points with code from already-merged streams
-- Find existing tests, types, or utilities to build on
-- Return a list of key files that will be read or modified
-
-After agents return, use the **Read tool** to read all key files they identified.
-
-**2b. Clarifying Questions** — Surface ambiguities before planning:
-- Edge cases: invalid inputs, empty states, concurrent access, large data, missing permissions
-- Error handling: what fails, how it fails, what the user sees
-- Integration points: how this stream connects to existing code and other streams
-- Scope boundaries: what's in, what's explicitly out
-- Backward compatibility: does this change existing behavior?
-- Performance: are there constraints on speed, memory, or payload size?
-- Present questions to user and **wait for answers before proceeding**
-
-**2c. Architecture & Approach** — Design the implementation:
-- Propose concrete approach: files to create/modify, patterns to follow, data flow
-- Apply language/framework best practices and existing codebase conventions
-- If multiple viable approaches exist, present options with tradeoffs and recommendation
-- **Ask user which approach they prefer** (or confirm recommendation)
-
-**2d. Refine AC** — Expand the high-level AC into implementation-level criteria:
-- Convert behavioral AC from requirements into concrete, testable checks
-- Add implementation criteria: migrations, type exports, error states, edge case handling
-- Add quality criteria: tests pass, no regressions, follows codebase conventions
-- Each AC should be independently verifiable during review
-
-**2e. Task Breakdown** — Break the stream into ordered tasks:
-- Each task should be a single commit-sized unit of work
-- Tasks should build on each other (order matters)
-- Include test tasks alongside implementation tasks
-
-**2f. Review Plan with User** — Present the full stream plan:
-- Approach summary
-- Refined AC checklist
-- Task list with order
-- Files to create/modify
-- Ask: "Does this plan look right? Ready to start implementation?"
-- **Do not proceed until the user explicitly approves.**
-
-#### Step 3: Commit Stream Plan to Meta
-
-Use the **Write tool** to update `streams/<name>/plan.md` with the refined plan. Then commit:
-
-```bash
-cd <repo-path>
-git checkout meta
-git add streams/<name>/plan.md
-git commit -m "meta: refined stream plan — <stream-name>"
-git checkout <original-branch>
-```
-
-### Refined Stream `plan.md` Format (after design pass)
-
-```markdown
-# Plan: <stream-name>
-
-## Objective
-<what this stream delivers>
-
-## Approach
-<concrete implementation strategy — patterns, data flow, key decisions>
-
-## Acceptance Criteria
-- [ ] Given <precondition>, when <action>, then <result>
-- [ ] <edge case>: <expected behavior>
-- [ ] <error scenario>: <expected behavior>
-- [ ] <implementation criterion — e.g., migrations run cleanly>
-- [ ] <quality criterion — e.g., tests pass, no regressions>
-- [ ] PR reviewed and approved
-
-## Tasks
-1. [ ] <task — commit-sized unit of work>
-2. [ ] <task>
-3. [ ] <task — includes tests>
-
-## Files
-- Create: <new files>
-- Modify: <existing files>
-
-## Dependencies
-- Blocked by: <stream-names or "none">
-- Blocks: <stream-names or "none">
-
-## Decisions
-- <decision made during design pass with brief rationale>
-
-## Notes
-<edge cases, open questions resolved during clarification>
-```
+Contains: Objective, Approach, Principle Compliance table, Stack Guidelines Applied, Quality Checklist, Acceptance Criteria, Tasks, Files, Dependencies, Decisions, Notes.
 
 ---
 
