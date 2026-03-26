@@ -35,7 +35,8 @@ Evaluate:
 1. **Not on main/master.** If on main, stop and ask the user which branch to create.
 2. **Commits exist ahead of base.** If `git log main..HEAD` is empty, stop — nothing to PR.
 3. **Uncommitted changes.** If dirty, ask the user if they want to commit first.
-4. **PR already exists.** If `gh pr view` succeeds, skip to **Step 6: Monitor CI**.
+4. **PR already exists.** If `gh pr view` succeeds, skip to **Step 7: Monitor CI**.
+5. **Suggest verify.** If the diff is non-trivial (>50 lines changed) and a stream plan with AC exists, ask: "Have you run `/verify`? (y / run it now / skip)". If the user says "run it now", invoke the **verify** skill and return to create-pr after it completes.
 
 ---
 

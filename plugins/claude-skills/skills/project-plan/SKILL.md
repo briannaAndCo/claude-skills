@@ -158,20 +158,32 @@ Walk through one at a time. **Get the user's call before proceeding.**
 
 ### Step 7: Commit
 
-Use the **Write tool** to create `design.md` in the repo root. Then commit to meta:
+Commit to meta using a temporary worktree to avoid touching the user's working tree:
 
 ```bash
 cd <repo-path>
-git checkout meta/<project-slug>
+git worktree add /tmp/meta-work meta/<project-slug>
+```
+
+Use the **Write tool** to create `design.md` in `/tmp/meta-work/`. Then:
+
+```bash
+cd /tmp/meta-work
 git add design.md
 git commit -m "meta: add project design and guiding principles"
-git checkout <original-branch>
 ```
 
 If a remote is configured, push:
 
 ```bash
 git push origin meta/<project-slug>
+```
+
+Clean up:
+
+```bash
+cd <repo-path>
+git worktree remove /tmp/meta-work
 ```
 
 ---
@@ -264,7 +276,7 @@ git push origin meta/<project-slug>
 ## Important Notes
 
 - **Guiding principles are the contract between project-plan and stream-plan.** Stream plans must reference applicable principles by ID and show how they comply.
-- **The review-stream skill also verifies against guiding principles.** The quality agent checks principle compliance alongside DRY/simplicity/conventions.
+- **The verify skill also checks against guiding principles.** The quality agent checks principle compliance alongside DRY/simplicity/conventions.
 - **Principles are living.** If a stream plan reveals that a principle is wrong or too restrictive, update `design.md` on meta — don't silently ignore it.
 - **Use the Write tool for creating files, Edit tool for modifying files, and Read tool for reading files.** Only use Bash for git commands and directory creation.
 - **Keep principles language-agnostic.** Stack-specific guidance goes in "Stack notes" under each principle, not in the principle statement itself.

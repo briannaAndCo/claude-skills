@@ -200,20 +200,32 @@ Ask:
 
 ### Step 8: Commit
 
-Use the **Write tool** to create `requirements.md` in the repo root. Then commit to meta:
+Commit to meta using a temporary worktree to avoid touching the user's working tree:
 
 ```bash
 cd <repo-path>
-git checkout meta/<project-slug>
+git worktree add /tmp/meta-work meta/<project-slug>
+```
+
+Use the **Write tool** to create `requirements.md` in `/tmp/meta-work/`. Then:
+
+```bash
+cd /tmp/meta-work
 git add requirements.md
 git commit -m "meta: add requirements"
-git checkout <original-branch>
 ```
 
 If a remote is configured, push:
 
 ```bash
 git push origin meta/<project-slug>
+```
+
+Clean up:
+
+```bash
+cd <repo-path>
+git worktree remove /tmp/meta-work
 ```
 
 ---

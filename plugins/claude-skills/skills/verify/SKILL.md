@@ -1,10 +1,10 @@
 ---
-name: review
-description: This skill should be used when the user asks to "review", "review this", "review the code", "review stream", "check the code", "look over this", "audit this", or mentions reviewing files, checking against acceptance criteria, or validating a stream's work before marking it complete.
+name: verify
+description: This skill should be used when the user asks to "verify", "verify this", "verify the code", "review", "review this", "review the code", "review stream", "check the code", "look over this", "audit this", or mentions reviewing files, checking against acceptance criteria, or validating a stream's work before marking it complete.
 version: 2.0.0
 ---
 
-# Review
+# Verify
 
 Reviews code written this session against the stream's plan, acceptance criteria, standards, and edge conditions. Presents findings interactively for triage — fix, defer, or skip each issue.
 
@@ -12,13 +12,16 @@ Reviews code written this session against the stream's plan, acceptance criteria
 
 ## Step 1: Gather Context
 
-Read the stream plan from the meta branch:
+Read the stream plan and design from the meta branch:
 
 ```bash
 git show meta/<project-slug>:streams/<stream-name>/plan.md
+git show meta/<project-slug>:design.md 2>/dev/null || true
 ```
 
 Find `<stream-name>` from the current branch name (e.g. `stream/<stream-name>`). If no stream context, ask the user: "What are the acceptance criteria or goals I should review against?"
+
+From `design.md`, extract the guiding principles (GP-1 through GP-N). From the stream's `plan.md`, extract the principle compliance table and quality checklist.
 
 Also read:
 
@@ -70,6 +73,17 @@ Look for:
 - Does the function name match its behavior?
 - Are comments that explain *why* present where the code is non-obvious?
 - Are there misleading comments (e.g. "idempotent-safe" on something that can't distinguish not-found from already-done)?
+
+### 2f. Guiding Principle Compliance
+
+If `design.md` exists with guiding principles, check each applicable GP against the code:
+
+- For each GP in the stream plan's compliance table: does the code follow the stated approach?
+- Are there any violations in the "Risk Areas" the plan identified?
+- Are there principle violations the plan didn't anticipate?
+- If the stream plan has a quality checklist, verify each item
+
+Skip this dimension if no `design.md` or guiding principles exist.
 
 ---
 

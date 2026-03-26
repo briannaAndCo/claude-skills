@@ -6,7 +6,7 @@ version: 1.0.0
 
 # Stream Plan
 
-Designs a stream at implementation level by exploring the codebase, surfacing questions, discovering best practices, and mapping the approach against the project's guiding principles. Front-loads the quality and correctness concerns that review-stream checks — catching issues in planning rather than after implementation.
+Designs a stream at implementation level by exploring the codebase, surfacing questions, discovering best practices, and mapping the approach against the project's guiding principles. Front-loads the quality and correctness concerns that verify checks — catching issues in planning rather than after implementation.
 
 **Input from meta:** `design.md` (guiding principles, architecture, stack guidelines), `requirements.md`, stream's `plan.md` (high-level AC from decomposition)
 
@@ -39,7 +39,7 @@ Verify the stream is `unblocked` or `in-progress` in `plan.md`. If blocked, tell
 
 ### Step 2: Parallel Discovery
 
-Launch 3 **agents** in parallel, modeled after review-stream's 3-agent pattern but focused on **planning** rather than review:
+Launch 3 **agents** in parallel, modeled after verify's 3-agent pattern but focused on **planning** rather than review:
 
 #### Agent 1: Codebase Explorer
 - Map existing code patterns, conventions, and abstractions relevant to this stream
@@ -104,7 +104,7 @@ If multiple viable approaches exist, present each as:
 
 ### Step 5: Quality Checklist
 
-Front-load the concerns that review-stream's quality and correctness agents check. For each category, define what "passing" looks like **for this specific stream**:
+Front-load the concerns that verify's quality and correctness agents check. For each category, define what "passing" looks like **for this specific stream**:
 
 #### Simplicity
 - What is the minimum set of abstractions needed?
@@ -171,20 +171,32 @@ Present the full stream plan:
 
 ### Step 9: Commit Stream Plan to Meta
 
-Use the **Write tool** to update `streams/<name>/plan.md` with the refined plan. Then commit:
+Commit to meta using a temporary worktree to avoid touching the user's working tree:
 
 ```bash
 cd <repo-path>
-git checkout meta/<project-slug>
+git worktree add /tmp/meta-work meta/<project-slug>
+```
+
+Use the **Write tool** to update `/tmp/meta-work/streams/<name>/plan.md` with the refined plan. Then:
+
+```bash
+cd /tmp/meta-work
 git add streams/<name>/plan.md
 git commit -m "meta: refined stream plan — <stream-name>"
-git checkout <original-branch>
 ```
 
 If a remote is configured, push:
 
 ```bash
 git push origin meta/<project-slug>
+```
+
+Clean up:
+
+```bash
+cd <repo-path>
+git worktree remove /tmp/meta-work
 ```
 
 ---
@@ -253,7 +265,7 @@ git push origin meta/<project-slug>
 ## Important Notes
 
 - **Principle compliance is not optional.** Every applicable guiding principle must have an explicit entry in the compliance table. If a principle can't be satisfied, surface it to the user and propose amending `design.md` before proceeding.
-- **Quality checklist front-loads review.** The review-stream skill will verify these same concerns — catching them here means fewer review iterations.
+- **Quality checklist front-loads verification.** The verify skill will check these same concerns — catching them here means fewer iterations.
 - **Best practices are filtered through principles.** A "best practice" that conflicts with a guiding principle is not applicable to this project. Surface the conflict rather than silently adopting one over the other.
 - **Questions are asked one at a time.** Never batch multiple questions into a single message. Ask, wait, incorporate, then ask the next.
 - **Use the Write tool for creating files, Edit tool for modifying files, and Read tool for reading files.** Only use Bash for git commands and directory creation.
@@ -263,4 +275,4 @@ git push origin meta/<project-slug>
 
 ## Quality Checklist Reference
 
-See [references/quality-checklist.md](references/quality-checklist.md) for the full quality framework and how it maps to review-stream's agents.
+See [references/quality-checklist.md](references/quality-checklist.md) for the full quality framework and how it maps to verify's agents.

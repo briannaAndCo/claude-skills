@@ -44,20 +44,22 @@ Each project entry has a `path` (repo on disk), `name`, and `metaBranch`. The `s
 
 ## Entry Point: Opening the Projects Workspace
 
-When the skill is invoked, immediately run these Bash tool calls in parallel:
+When the skill is invoked, read the registry:
 
 ```bash
-cat ~/.claude/projects-registry.json 2>/dev/null || echo '{"projects_root": "~/projects"}'
+cat ~/.claude/projects-registry.json 2>/dev/null || echo '{"projects": [], "scanPaths": ["~/projects"]}'
 ```
 
+For each project in the registry, read its objective from the meta branch (the source of truth):
+
 ```bash
-ls ~/projects 2>/dev/null
+git -C <project-path> show <metaBranch>:plan.md 2>/dev/null | grep -A1 "^## Objective" | tail -1
 ```
 
-For each project found, read its objective:
+If the registry is empty, scan `scanPaths` directories for repos with `meta/*` branches:
 
 ```bash
-grep -A1 "^## Objective" ~/projects/<project>/plan.md 2>/dev/null | tail -1
+for dir in ~/projects/*/; do git -C "$dir" branch --list 'meta/*' 2>/dev/null | head -1 && echo "$dir"; done
 ```
 
 Show a numbered list:
@@ -74,14 +76,9 @@ If no projects exist, go straight to creating one.
 
 ## Creating a New Project
 
-1. Ask for the project name (convert to kebab-case for the folder)
-2. Ask for a brief description / objective
-3. Ask for initial planned streams (optional — can be added later)
-4. Ask for an optional GitHub repo URL (for tracking branch sync — can be added later)
-5. Create the project structure (see [File Structure](#file-structure))
-6. Populate `plan.md` with the objective, planned streams, and empty dependency/status table
-7. If a repo URL was provided, add it to `~/.claude/projects-registry.json` under `repos`
-8. Confirm creation, then offer to open it in tmux: `pt open <project-name>`
+Delegate to the **create-project** skill, which handles the full flow: repo init, orphan meta branch, planning files, registry entry, and remote setup.
+
+After create-project completes, return to the project list and offer to open the new project.
 
 ---
 
@@ -114,7 +111,7 @@ Enter a number to open a stream, or:
    - **p** → prompt for which unblocked/in-progress streams to open in parallel
    - **t** → show project-level tasks and hours summary
 
-5. If no streams exist yet, skip the numbered list and offer to create one or run the decompose phase
+5. If no streams exist yet, skip the numbered list and offer to create one or use **project-plan** to design the architecture and identify streams
 
 ---
 
@@ -247,39 +244,29 @@ Push to `meta/<project-slug>` after any of:
 
 ### How to Push
 
-1. Look up the repo URL for this project in `~/.claude/projects-registry.json` under `repos`
-2. If no URL is configured, skip silently
+1. Look up this project in `~/.claude/projects-registry.json` under `projects`. The `path` field gives the repo location on disk — check if it has a remote configured: `git -C <path> remote get-url origin 2>/dev/null`
+2. If no remote is configured, skip silently
 3. Resolve the meta branch name (see above)
-4. Set up a temporary clone or use the project's worktree if available:
+4. Use a temporary worktree to commit and push without touching the user's working tree:
 
 ```bash
-# Resolve the meta branch name from registry or convention
+cd <repo-path>
 META_BRANCH="meta/<project-slug>"
 
-# From a temp dir — clone sparse, meta branch only
-TMPDIR=$(mktemp -d)
-git clone --depth 1 --branch "$META_BRANCH" --no-checkout <repo-url> "$TMPDIR/meta-repo" 2>/dev/null \
-  || git clone --depth 1 --no-checkout <repo-url> "$TMPDIR/meta-repo"
+# Create worktree for the meta branch
+git worktree add /tmp/meta-work "$META_BRANCH"
 
-cd "$TMPDIR/meta-repo"
+# Update planning files in the worktree
+# Use Write/Edit tools to update files in /tmp/meta-work/
 
-# If meta branch doesn't exist yet, create orphan
-git checkout "$META_BRANCH" 2>/dev/null || git checkout --orphan "$META_BRANCH"
-
-# Wipe the branch content and replace with current planning files
-git rm -rf . --quiet 2>/dev/null || true
-
-# Copy planning files
-cp <projects-root>/<project-name>/plan.md .
-cp -r <projects-root>/<project-name>/streams ./streams
-
-# Commit and push
+cd /tmp/meta-work
 git add -A
 git commit -m "meta: update tracking — <brief description of what changed>"
 git push origin "$META_BRANCH"
 
 # Clean up
-rm -rf "$TMPDIR"
+cd <repo-path>
+git worktree remove /tmp/meta-work
 ```
 
 5. Inform the user: `"Pushed planning state to meta/<project-slug> branch."`
