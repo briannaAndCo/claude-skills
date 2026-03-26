@@ -69,14 +69,35 @@ Ask:
 
 ## Opening a Project
 
-1. Read the project's `plan.md` to display:
-   - Objective
-   - Stream list with statuses and blocking dependencies
-2. List streams and offer to:
-   - **Open a stream** (opens a new tmux window with Claude)
-   - **Open parallel streams** (opens multiple windows at once)
-   - **Create a new stream**
-   - **View project-level tasks/hours**
+1. Read the project's `plan.md` from the meta branch using Bash: `git show meta:plan.md`
+2. Display the project objective
+3. Parse the streams table and present **actionable streams** — those with status `in-progress` or `unblocked` — as a numbered list with brief summaries:
+
+```
+Ready to work on:
+
+  1. auth-middleware (in-progress) — JWT validation and session management
+  2. api-routes (unblocked) — REST endpoints for user and project resources
+  3. db-schema (unblocked) — SQLite migrations for core data model
+
+Other streams:
+  • notification-system (blocked by auth-middleware, api-routes)
+  • dashboard-ui (planned)
+  • settings-page (complete)
+
+Enter a number to open a stream, or:
+  n  Create a new stream
+  p  Open parallel streams
+  t  View project tasks/hours
+```
+
+4. Wait for user input:
+   - **Number** → open that stream (triggers Phase 5/6 from the project lifecycle — stream design if not yet designed, or implementation if already approved)
+   - **n** → create a new stream
+   - **p** → prompt for which unblocked/in-progress streams to open in parallel
+   - **t** → show project-level tasks and hours summary
+
+5. If no streams exist yet, skip the numbered list and offer to create one or run the decompose phase
 
 ---
 
