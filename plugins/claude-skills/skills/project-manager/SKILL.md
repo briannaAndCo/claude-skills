@@ -1,7 +1,7 @@
 ---
 name: project-manager
 description: This skill should be used when the user asks to "open projects", "manage projects", "new project", "create project", "open a stream", "start a session", "log time", "track time", "project manager", "what projects do I have", "show my projects", "open tmux", "start parallel streams", "run streams in parallel", "set up tmux for project", "work on multiple streams", or mentions working on an epic, story, ticket, or stream. Manages structured project and stream workspaces with session tracking, time logging, and tmux-based parallel Claude instances.
-version: 1.2.0
+version: 1.3.0
 disable-model-invocation: true
 ---
 
@@ -11,18 +11,17 @@ Manages a structured workspace of projects (epics) and streams (stories/tickets)
 
 ## Environment Assumption
 
-**Claude is always running inside a tmux session.** The user launches Claude via the `ct` alias (`tmux new-session -A -s claude`) or the `pt` alias (`project-tmux`). This means:
+**Claude is always running inside a tmux session.** The user launches Claude via the `ct` alias (`tmux new-session -A -s claude`). This means:
 
-- When opening a stream, always offer to open it in a **new tmux window** in the current session
-- When the user wants parallel work, open multiple tmux windows — one per stream — each with its own Claude instance
-- Never suggest running `tmux` as an optional step; it is the default environment
-- Use `pt` as the shorthand for `project-tmux` in all examples
+- When opening a stream, always open it in a **new tmux window** in the current session
+- When the user wants parallel work, open multiple windows — one per stream
+- The script to manage tmux is `~/bin/project-tmux`. Check if the `pt` alias exists first with `which pt 2>/dev/null`, and use `pt` if available, otherwise use `~/bin/project-tmux`
 
 ---
 
 ## Configuration
 
-Check for a config file at `~/.claude-projects-config`:
+Read config with:
 
 ```json
 {
@@ -33,7 +32,7 @@ Check for a config file at `~/.claude-projects-config`:
 }
 ```
 
-If it doesn't exist, use `~/projects` as the default root. If the user specifies a different location, create or update the config file.
+Default `projects_root` is `~/projects`. If the user specifies a different location, write or update the config file.
 
 The `repos` map is optional. When present, the project's tracking files are synced to a `meta` branch on that remote after every significant update (see [Tracking Branch](#tracking-branch)).
 
@@ -41,16 +40,31 @@ The `repos` map is optional. When present, the project's tracking files are sync
 
 ## Entry Point: Opening the Projects Workspace
 
-When the skill is invoked:
+When the skill is invoked, immediately run these Bash tool calls in parallel:
 
-1. Read the config to get `projects_root`
-2. List all directories inside `projects_root` (each is a project)
-3. Present the user with:
-   - A list of existing projects (name + brief status from `plan.md` if available)
-   - Option to **create a new project**
+```bash
+cat ~/.claude-projects-config 2>/dev/null || echo '{"projects_root": "~/projects"}'
+```
 
-Ask:
-> "Which project would you like to work on, or would you like to create a new one?"
+```bash
+ls ~/projects 2>/dev/null
+```
+
+For each project found, read its objective:
+
+```bash
+grep -A1 "^## Objective" ~/projects/<project>/plan.md 2>/dev/null | tail -1
+```
+
+Show a numbered list:
+```
+1. braindump-notes — Mobile-first note-taking app
+2. my-api — REST API backend
+```
+
+Ask: "Which project do you want to open? Or say **new** to create one."
+
+If no projects exist, go straight to creating one.
 
 ---
 
@@ -71,19 +85,18 @@ Ask:
 
 1. Read the project's `plan.md` from the meta branch using Bash: `git show meta:plan.md`
 2. Display the project objective
-3. Parse the streams table and present **actionable streams** — those with status `in-progress` or `unblocked` — as a numbered list with brief summaries:
+3. Parse the streams table and present a **full status table** — all streams, all statuses — followed by actionable streams highlighted:
 
 ```
-Ready to work on:
-
-  1. auth-middleware (in-progress) — JWT validation and session management
-  2. api-routes (unblocked) — REST endpoints for user and project resources
-  3. db-schema (unblocked) — SQLite migrations for core data model
-
-Other streams:
-  • notification-system (blocked by auth-middleware, api-routes)
-  • dashboard-ui (planned)
-  • settings-page (complete)
+Streams:
+| Stream                  | Status      | Blocked By                          |
+|-------------------------|-------------|-------------------------------------|
+| auth-middleware         | in-progress | —                                   |
+| api-routes              | unblocked   | —                                   |
+| db-schema               | unblocked   | —                                   |
+| notification-system     | blocked     | auth-middleware, api-routes          |
+| dashboard-ui            | planned     | —                                   |
+| settings-page           | complete    | —                                   |
 
 Enter a number to open a stream, or:
   n  Create a new stream
@@ -103,33 +116,30 @@ Enter a number to open a stream, or:
 
 ## Creating a New Stream
 
-1. Ask for the stream name (kebab-case for folder)
+1. Ask for the stream name (kebab-case)
 2. Ask for objective / scope
-3. Ask which streams (if any) this stream is blocked by
+3. Ask which streams (if any) this is blocked by
 4. Create the stream directory with `plan.md`, `session.md`, `hours.md`
-5. Update the project's `plan.md` to add the new stream with `planned` status and its dependencies
-6. Offer to open it immediately: `pt stream <project-name> <stream-name>`
+5. Update the project's `plan.md` streams table with `planned` status and dependencies
+6. Offer to open it: `~/bin/project-tmux stream <project> <stream>`
 
 ---
 
 ## Opening a Stream
 
-Opening a stream always means opening it in a new tmux window with its own Claude instance:
+Run using the Bash tool:
 
 ```bash
-pt stream <project-name> <stream-name>
+~/bin/project-tmux stream <project> <stream>
 ```
 
-This:
-1. Writes a `CLAUDE.md` into the stream directory with project/stream context
-2. Opens a new tmux window named after the stream (colored uniquely in the status bar)
-3. Starts `claude` in that window — reads `CLAUDE.md` automatically on launch
+This writes `CLAUDE.md` into the stream directory, opens a new tmux window named after the stream, and starts `claude` in it.
 
 The Claude instance in that window is independent. The user switches to it with `Prefix + <window-number>`.
 
 Once inside a stream window, that Claude instance should:
-1. Display the stream's `plan.md` (objective, tasks, acceptance criteria)
-2. Show recent sessions from `session.md` and total from `hours.md`
+1. Read and display the stream's `plan.md` (objective, tasks, acceptance criteria)
+2. Show recent sessions from `session.md` and total hours from `hours.md`
 3. Ask what the user wants to do:
    - **Start a session**
    - **Log time manually**
@@ -140,24 +150,13 @@ Once inside a stream window, that Claude instance should:
 
 ## Running Parallel Streams
 
-When the user wants to work on multiple streams simultaneously:
-
-1. Read `plan.md` and identify which streams are `unblocked` or `in-progress`
-2. Present the unblocked streams and suggest a parallel grouping based on the dependency map
-3. Open them all at once:
-
 ```bash
-pt parallel <project-name> <stream1> <stream2> <stream3> ...
+~/bin/project-tmux parallel <project> <stream1> <stream2> ...
 ```
 
-Each stream gets its own colored tmux window and independent Claude instance. The user switches between them with `Prefix + <number>`.
+Each stream gets its own tmux window and independent Claude instance.
 
-**Example — Wave 4 of continuous-notebook:**
-```bash
-pt parallel braindump-notes \
-  auto-append inline-editing paginated-scroll \
-  background-sync color-rotation hand-drawn-rendering
-```
+When the user says "parallel", read `plan.md`, show all unblocked/in-progress streams, and ask which ones to open together.
 
 ---
 
@@ -165,18 +164,18 @@ pt parallel braindump-notes \
 
 ### Starting a Session
 
-Record the start time in the stream's `session.md`:
+Record start time in the stream's `session.md`:
 
 ```markdown
 ## Session: YYYY-MM-DD HH:MM
 - **Status**: in-progress
 ```
 
-Also update the project-level `session.md` with the same entry.
+Also update the project-level `session.md`.
 
 ### Ending a Session
 
-When the user signals they're done (says "end session", "stop session", "done for now", "wrapping up", "save session"):
+When the user says "end session", "stop session", "done for now", "wrapping up", or "save session":
 
 1. Record end time
 2. Calculate duration — **round to nearest 15 minutes**
@@ -191,8 +190,6 @@ When the user signals they're done (says "end session", "stop session", "done fo
 
 ## Time Tracking Rules
 
-See [references/time-tracking.md](references/time-tracking.md) for rounding rules and format.
-
 - All durations rounded to nearest **15-minute increment**
 - Format: `Xh Ym` (e.g., `1h 30m`, `0h 45m`, `2h 00m`)
 - Minimum logged: `0h 15m`
@@ -204,7 +201,7 @@ See [references/time-tracking.md](references/time-tracking.md) for rounding rule
 ```
 <projects-root>/
 └── <project-name>/
-    ├── plan.md            # Master plan: objective, streams, dependencies, statuses
+    ├── plan.md            # Master plan: objective, streams table, dependency map
     ├── session.md         # Project-level session log (all streams combined)
     ├── tasks.md           # All tasks logged across streams with time
     └── streams/
@@ -214,23 +211,6 @@ See [references/time-tracking.md](references/time-tracking.md) for rounding rule
             ├── session.md # Stream-level session log
             └── hours.md   # Time entries for this stream
 ```
-
-See [references/file-formats.md](references/file-formats.md) for exact file formats.
-
----
-
-## tmux Quick Reference
-
-```bash
-pt open     <project>               # open project overview window
-pt stream   <project> <stream>      # open stream in new window with Claude
-pt parallel <project> <s1> <s2>...  # open parallel streams
-pt attach   <project>               # reconnect to a session
-pt list                             # list active project sessions
-pt kill     <project>               # end a session
-```
-
-See [references/tmux-setup.md](references/tmux-setup.md) for status bar config and tips.
 
 ---
 
