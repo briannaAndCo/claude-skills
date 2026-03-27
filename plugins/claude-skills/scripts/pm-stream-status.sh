@@ -3,11 +3,31 @@
 # Usage: pm-stream-status <project> <stream>
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/pm-resolve.sh" "${1:-}"
+if [ $# -lt 1 ]; then echo "Usage: pm-stream-status [project] <stream>"; exit 1; fi
 
-if [ $# -lt 2 ]; then echo "Usage: pm-stream-status <project> <stream>"; exit 1; fi
-STREAM="$2"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REGISTRY="$HOME/.claude/projects-registry.json"
+
+_is_registered_project() {
+  [ -f "$REGISTRY" ] || return 1
+  python3 -c "
+import json, sys
+with open('$REGISTRY') as f:
+    reg = json.load(f)
+for p in reg.get('projects', []):
+    if p['name'] == sys.argv[1]:
+        sys.exit(0)
+sys.exit(1)
+" "$1" 2>/dev/null
+}
+
+if [ $# -ge 2 ]; then
+  source "$SCRIPT_DIR/pm-resolve.sh" "$1"
+  STREAM="$2"
+elif [ $# -eq 1 ]; then
+  source "$SCRIPT_DIR/pm-resolve.sh"
+  STREAM="$1"
+fi
 
 echo "=== Stream: $STREAM ==="
 echo ""

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# pm — unified project manager CLI
+# Usage: pm <command> [args...]
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+
+case "${1:-help}" in
+  status)    shift; bash "$SCRIPT_DIR/pm-status.sh" "$@" ;;
+  next)      shift; bash "$SCRIPT_DIR/pm-next.sh" "$@" ;;
+  blocked)   shift; bash "$SCRIPT_DIR/pm-blocked.sh" "$@" ;;
+  hours)     shift; bash "$SCRIPT_DIR/pm-hours.sh" "$@" ;;
+  search)    shift; bash "$SCRIPT_DIR/pm-search.sh" "$@" ;;
+  stream)    shift; bash "$SCRIPT_DIR/pm-stream-status.sh" "$@" ;;
+  projects)  bash "$SCRIPT_DIR/pm-list-projects.sh" ;;
+  set-status) shift; bash "$SCRIPT_DIR/pm-set-status.sh" "$@" ;;
+  sync)      shift; bash "$SCRIPT_DIR/pm-sync-json.sh" "$@" ;;
+  help|*)
+    echo "pm — project manager CLI"
+    echo ""
+    echo "Usage: pm <command> [project] [args...]"
+    echo "  If [project] is omitted, auto-detects from current directory."
+    echo ""
+    echo "Commands:"
+    echo "  status  [project]              Project overview with stream status"
+    echo "  next    [project]              Streams ready to work on"
+    echo "  blocked [project]              Blocked streams and their blockers"
+    echo "  hours   [project]              Hours summary by stream"
+    echo "  stream  [project] <stream>     Single stream details"
+    echo "  search  [project] <query>      Search across planning files"
+    echo "  set-status [project] <stream> <status>  Update stream status"
+    echo "  sync    [project]              Regenerate project.json from plan.md"
+    echo "  projects                       List all registered projects"
+    echo ""
+    echo "Valid statuses: planned | unblocked | in-progress | blocked | complete | on-hold"
+    ;;
+esac

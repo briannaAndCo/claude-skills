@@ -3,11 +3,31 @@
 # Usage: pm-search <project-name-or-path> <query>
 set -euo pipefail
 
-if [ $# -lt 2 ]; then echo "Usage: pm-search <project> <query>"; exit 1; fi
+if [ $# -lt 1 ]; then echo "Usage: pm-search [project] <query>"; exit 1; fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/pm-resolve.sh" "${1:-}"
-QUERY="$2"
+REGISTRY="$HOME/.claude/projects-registry.json"
+
+_is_registered_project() {
+  [ -f "$REGISTRY" ] || return 1
+  python3 -c "
+import json, sys
+with open('$REGISTRY') as f:
+    reg = json.load(f)
+for p in reg.get('projects', []):
+    if p['name'] == sys.argv[1]:
+        sys.exit(0)
+sys.exit(1)
+" "$1" 2>/dev/null
+}
+
+if [ $# -ge 2 ]; then
+  source "$SCRIPT_DIR/pm-resolve.sh" "$1"
+  QUERY="$2"
+elif [ $# -eq 1 ]; then
+  source "$SCRIPT_DIR/pm-resolve.sh"
+  QUERY="$1"
+fi
 
 # List all files on meta branch and grep through them
 FILES=$(git -C "$REPO_DIR" ls-tree -r --name-only "$META_BRANCH" 2>/dev/null) || { echo "No meta branch found"; exit 1; }

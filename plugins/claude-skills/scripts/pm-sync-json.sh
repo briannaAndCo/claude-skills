@@ -6,8 +6,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pm-resolve.sh" "${1:-}"
 
-if [ $# -lt 1 ]; then echo "Usage: pm-sync-json <project>"; exit 1; fi
-
 PLAN=$(git -C "$REPO_DIR" show "$META_BRANCH:plan.md" 2>/dev/null) || { echo "No meta branch found"; exit 1; }
 
 # Extract fields

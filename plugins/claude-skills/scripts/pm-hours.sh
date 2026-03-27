@@ -3,8 +3,6 @@
 # Usage: pm-hours <project-name-or-path>
 set -euo pipefail
 
-if [ $# -lt 1 ]; then echo "Usage: pm-hours <project>"; exit 1; fi
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pm-resolve.sh" "${1:-}"
 
@@ -21,7 +19,19 @@ echo ""
 printf "%-25s %s\n" "Stream" "Total"
 printf "%-25s %s\n" "-------------------------" "----------"
 
-STREAMS=$(git -C "$REPO_DIR" show "$META_BRANCH:plan.md" 2>/dev/null | grep "^|" | tail -n +3 | awk -F'|' '{gsub(/^ +| +$/, "", $2); if ($2 != "" && $2 !~ /^-/) print $2}')
+# Get stream names: prefer project.json, fall back to plan.md
+PROJECT_JSON=$(git -C "$REPO_DIR" show "$META_BRANCH:project.json" 2>/dev/null || true)
+
+if [ -n "$PROJECT_JSON" ]; then
+  STREAMS=$(echo "$PROJECT_JSON" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for name in data.get('streams', {}).keys():
+    print(name)
+")
+else
+  STREAMS=$(git -C "$REPO_DIR" show "$META_BRANCH:plan.md" 2>/dev/null | grep "^|" | tail -n +3 | awk -F'|' '{gsub(/^ +| +$/, "", $2); if ($2 != "" && $2 !~ /^-/) print $2}')
+fi
 
 total_min=0
 while read -r stream; do

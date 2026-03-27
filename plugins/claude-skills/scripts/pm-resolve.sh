@@ -49,6 +49,35 @@ for p in reg.get('projects', []):
   return 1
 }
 
+_pm_resolve_cwd() {
+  # Auto-detect project from current working directory
+  local repo_root
+  repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
+
+  if [ -f "$REGISTRY" ]; then
+    local result
+    result=$(python3 -c "
+import json, os, sys
+with open('$REGISTRY') as f:
+    reg = json.load(f)
+repo_root = os.path.realpath(sys.argv[1])
+for p in reg.get('projects', []):
+    if os.path.realpath(os.path.expanduser(p['path'])) == repo_root:
+        print(os.path.expanduser(p['path']) + '|' + p.get('metaBranch', 'meta/' + p['name']))
+        break
+" "$repo_root" 2>/dev/null || true)
+    if [ -n "$result" ]; then
+      IFS='|' read -r REPO_DIR META_BRANCH <<< "$result"
+      return 0
+    fi
+  fi
+
+  echo "No registered project found for $(pwd)" >&2
+  return 1
+}
+
 if [ -n "${1:-}" ]; then
   _pm_resolve "$1"
+else
+  _pm_resolve_cwd
 fi
