@@ -174,46 +174,51 @@ For deterministic queries, **always run scripts directly** instead of using Clau
 | Hours summary | `pm-hours.sh <project>` | Hours by stream + totals |
 | Stream details | `pm-stream-status.sh <project> <stream>` | Plan, sessions, hours for one stream |
 | Search planning files | `pm-search.sh <project> <query>` | Grep across meta branch |
-| Regenerate project.json | `pm-sync-json.sh <project>` | Rebuild from plan.md |
+| Regenerate project.json | `pm-meta-edit.sh <project> --sync-json` | Rebuild from plan.md |
+| Update stream status | `pm-meta-edit.sh <project> --set-status <stream> <status>` | Safe worktree update |
+| Log session start | `pm-meta-edit.sh <project> --session-start <stream>` | Timestamped entry |
+| Log session end | `pm-meta-edit.sh <project> --session-end <stream> <dur> <summary>` | Hours + session log |
 
 **Script location:** Find the scripts directory relative to the skill:
 ```bash
 SCRIPTS="${CLAUDE_SKILL_DIR}/../../scripts"
-# or fall back to:
-SCRIPTS="$(dirname "$(dirname "$CLAUDE_SKILL_DIR")")/scripts"
 ```
 
 **When to use scripts vs Claude:**
 - Status, listing, searching, hours → always scripts (instant, free)
-- Creating, editing plans, session management → Claude (needs judgment)
+- Meta branch writes (status, sessions, hours) → `pm-meta-edit.sh` (safe worktree, free)
+- Creating streams, editing plans/AC → Claude + `pm-meta-edit.sh --write` (needs judgment)
 
 ---
 
 ## Session Management
 
+All meta branch writes use `pm-meta-edit.sh` which creates a **temporary worktree** — never touches the user's working tree. See the `meta-sync` skill for full details.
+
 ### Starting a Session
 
-Record start time in the stream's `session.md`:
-
-```markdown
-## Session: YYYY-MM-DD HH:MM
-- **Status**: in-progress
+```bash
+SCRIPTS="${CLAUDE_SKILL_DIR}/../../scripts"
+bash "$SCRIPTS/pm-meta-edit.sh" <project> --session-start <stream>
 ```
 
-Also update the project-level `session.md`.
+This appends a timestamped entry to both `streams/<stream>/session.md` and the project-level `session.md`.
 
 ### Ending a Session
 
 When the user says "end session", "stop session", "done for now", "wrapping up", or "save session":
 
-1. Record end time
-2. Calculate duration — **round to nearest 15 minutes**
-3. Ask what was accomplished (brief notes)
-4. Append completed session to stream `session.md`
-5. Append an entry to stream `hours.md`
-6. Append an entry to project-level `tasks.md`
-7. Update the project-level `session.md`
-8. Push to the `meta/<project-slug>` branch (see [Tracking Branch](#tracking-branch))
+1. Calculate duration — **round to nearest 15 minutes**
+2. Ask what was accomplished (brief notes)
+3. Run the script:
+
+```bash
+bash "$SCRIPTS/pm-meta-edit.sh" <project> --session-end <stream> "<duration>" "<summary>"
+```
+
+This updates: stream `hours.md`, stream `session.md`, and project-level `tasks.md` — all in one atomic commit.
+
+4. Push to the `meta/<project-slug>` branch if remote is configured (see [Tracking Branch](#tracking-branch))
 
 ---
 

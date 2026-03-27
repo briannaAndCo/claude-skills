@@ -290,10 +290,11 @@ sleep 1
 
 ### 7. Update Stream Status on Meta Branch
 
-If the stream's current status is `unblocked` or `planned`, update it to `in-progress`:
+If the stream's current status is `unblocked` or `planned`, update it to `in-progress`. Use `pm-meta-edit.sh` which safely edits via a temporary worktree:
 
 ```bash
-~/.claude/scripts/open-stream.sh update-meta <repo-path> <meta-branch> <stream> in-progress
+SCRIPTS="${CLAUDE_SKILL_DIR}/../../scripts"
+bash "$SCRIPTS/pm-meta-edit.sh" <repo-path> --set-status <stream> in-progress
 ```
 
 **Skip this step** if `create-meta-tracking` was already called in Step 2 (it already sets the status to `in-progress`).

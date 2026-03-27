@@ -18,24 +18,73 @@ case "${1:-help}" in
   search)    shift; bash "$SCRIPT_DIR/pm-search.sh" "$@" ;;
   stream)    shift; bash "$SCRIPT_DIR/pm-stream-status.sh" "$@" ;;
   projects)  bash "$SCRIPT_DIR/pm-list-projects.sh" ;;
-  set-status) shift; bash "$SCRIPT_DIR/pm-set-status.sh" "$@" ;;
-  sync)      shift; bash "$SCRIPT_DIR/pm-sync-json.sh" "$@" ;;
+  set-status)
+    # pm set-status [project] <stream> <status>
+    # Needs to become: pm-meta-edit.sh <project> --set-status <stream> <status>
+    shift
+    if [ $# -eq 3 ]; then
+      bash "$SCRIPT_DIR/pm-meta-edit.sh" "$1" --set-status "$2" "$3"
+    elif [ $# -eq 2 ]; then
+      # Auto-detect project, args are <stream> <status>
+      PROJECT=$(bash -c 'source "'"$SCRIPT_DIR"'/pm-resolve.sh" && echo "$REPO_DIR"' 2>/dev/null) || { echo "Cannot auto-detect project from cwd"; exit 1; }
+      bash "$SCRIPT_DIR/pm-meta-edit.sh" "$PROJECT" --set-status "$1" "$2"
+    else
+      echo "Usage: pm set-status [project] <stream> <status>"; exit 1
+    fi
+    ;;
+  session-start)
+    shift
+    if [ $# -eq 2 ]; then
+      bash "$SCRIPT_DIR/pm-meta-edit.sh" "$1" --session-start "$2"
+    elif [ $# -eq 1 ]; then
+      PROJECT=$(bash -c 'source "'"$SCRIPT_DIR"'/pm-resolve.sh" && echo "$REPO_DIR"' 2>/dev/null) || { echo "Cannot auto-detect project from cwd"; exit 1; }
+      bash "$SCRIPT_DIR/pm-meta-edit.sh" "$PROJECT" --session-start "$1"
+    else
+      echo "Usage: pm session-start [project] <stream>"; exit 1
+    fi
+    ;;
+  session-end)
+    shift
+    if [ $# -eq 4 ]; then
+      bash "$SCRIPT_DIR/pm-meta-edit.sh" "$1" --session-end "$2" "$3" "$4"
+    elif [ $# -eq 3 ]; then
+      PROJECT=$(bash -c 'source "'"$SCRIPT_DIR"'/pm-resolve.sh" && echo "$REPO_DIR"' 2>/dev/null) || { echo "Cannot auto-detect project from cwd"; exit 1; }
+      bash "$SCRIPT_DIR/pm-meta-edit.sh" "$PROJECT" --session-end "$1" "$2" "$3"
+    else
+      echo "Usage: pm session-end [project] <stream> <duration> <summary>"; exit 1
+    fi
+    ;;
+  meta-edit) shift; bash "$SCRIPT_DIR/pm-meta-edit.sh" "$@" ;;
+  sync)
+    shift
+    if [ $# -ge 1 ]; then
+      bash "$SCRIPT_DIR/pm-meta-edit.sh" "$1" --sync-json
+    else
+      PROJECT=$(bash -c 'source "'"$SCRIPT_DIR"'/pm-resolve.sh" && echo "$REPO_DIR"' 2>/dev/null) || { echo "Cannot auto-detect project from cwd"; exit 1; }
+      bash "$SCRIPT_DIR/pm-meta-edit.sh" "$PROJECT" --sync-json
+    fi
+    ;;
   help|*)
     echo "pm — project manager CLI"
     echo ""
     echo "Usage: pm <command> [project] [args...]"
     echo "  If [project] is omitted, auto-detects from current directory."
     echo ""
-    echo "Commands:"
+    echo "Read commands (zero cost):"
     echo "  status  [project]              Project overview with stream status"
     echo "  next    [project]              Streams ready to work on"
     echo "  blocked [project]              Blocked streams and their blockers"
     echo "  hours   [project]              Hours summary by stream"
     echo "  stream  [project] <stream>     Single stream details"
     echo "  search  [project] <query>      Search across planning files"
-    echo "  set-status [project] <stream> <status>  Update stream status"
-    echo "  sync    [project]              Regenerate project.json from plan.md"
     echo "  projects                       List all registered projects"
+    echo ""
+    echo "Write commands (updates meta branch via temp worktree):"
+    echo "  set-status <project> --set-status <stream> <status>"
+    echo "  session-start <project> --session-start <stream>"
+    echo "  session-end <project> --session-end <stream> <dur> <summary>"
+    echo "  sync <project>                 Regenerate project.json"
+    echo "  meta-edit <project> <subcommand> [args...]  General meta edits"
     echo ""
     echo "Valid statuses: planned | unblocked | in-progress | blocked | complete | on-hold"
     ;;
