@@ -28,5 +28,5 @@ printf "%-4s %-25s %s\n" "---" "-------------------------" "--------------------
 
 echo "$PROJECTS" | while IFS='|' read -r num name path meta; do
   objective=$(git -C "$path" show "$meta:plan.md" 2>/dev/null | sed -n '/^## Objective$/,/^##/{/^##/!p;}' | head -1 | xargs 2>/dev/null || echo "(no objective)")
-  printf "%-4s %-25s %s\n" "$num" "$name" "${objective:0:50}"
+  printf "%-4s %-25s %s\n" "$num" "$name" "${objective:0:80}"
 done
