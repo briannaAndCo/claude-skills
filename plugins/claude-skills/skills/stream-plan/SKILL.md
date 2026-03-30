@@ -1,7 +1,8 @@
 ---
 name: stream-plan
 description: Stream-level planning — implementation design, best practices, quality checklist, and guiding principle compliance. Called when opening a stream for design (Phase 5) or invoked directly. Reads guiding principles from design.md and produces a refined stream plan.md with concrete approach, principle compliance mapping, and front-loaded quality checks.
-version: 1.0.0
+version: 1.1.0
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git *), Bash(bash *), Bash(cargo *), Bash(npm *), WebSearch
 ---
 
 # Stream Plan

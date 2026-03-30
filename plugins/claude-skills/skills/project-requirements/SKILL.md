@@ -1,7 +1,8 @@
 ---
 name: project-requirements
 description: Requirements gathering and analysis from source documents and user input. Called after create-project and before project-plan. Ingests documents (PRDs, specs, notes, transcripts), extracts capabilities, surfaces questions and issues one at a time, and produces a structured requirements.md on the meta branch. Supports document files, typed input, or both.
-version: 1.0.0
+version: 1.1.0
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git *), Bash(bash *), WebSearch
 ---
 
 # Project Requirements

@@ -1,8 +1,9 @@
 ---
 name: project-manager
 description: This skill should be used when the user asks to "open projects", "manage projects", "new project", "create project", "open a stream", "start a session", "log time", "track time", "project manager", "what projects do I have", "show my projects", "open tmux", "start parallel streams", "run streams in parallel", "set up tmux for project", "work on multiple streams", or mentions working on an epic, story, ticket, or stream. Manages structured project and stream workspaces with session tracking, time logging, and tmux-based parallel Claude instances.
-version: 1.4.0
+version: 1.5.0
 disable-model-invocation: true
+allowed-tools: Read, Glob, Grep, Bash(git *), Bash(tmux *), Bash(osascript *), Bash(bash *), Bash(pm *), Bash(pt *)
 ---
 
 # Project Manager

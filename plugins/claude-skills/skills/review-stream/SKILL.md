@@ -1,7 +1,8 @@
 ---
 name: review-stream
 description: This skill should be used when the user asks to "review stream", "review code", "review PR", "check stream quality", "is this ready to merge", or wants an adversarial quality review of a stream's work. Runs parallel critic agents (AC verification, code quality, correctness) that can only read — never edit. Produces a scored review with actionable findings.
-version: 1.0.0
+version: 1.1.0
+allowed-tools: Read, Glob, Grep, Bash(git *), Bash(cargo *), Bash(npm *), Bash(npx *), Bash(bash *)
 ---
 
 # Review Stream

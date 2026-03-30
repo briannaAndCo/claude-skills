@@ -1,7 +1,8 @@
 ---
 name: create-pr
 description: This skill should be used when the user asks to "create a PR", "open a PR", "make a pull request", "submit a PR", "raise a PR", or "push a PR". Creates a draft pull request with a clear title, AC mapping, and CI monitoring.
-version: 2.0.0
+version: 2.1.0
+allowed-tools: Read, Glob, Grep, Bash(git *), Bash(gh *), Bash(bash *)
 ---
 
 # Create PR

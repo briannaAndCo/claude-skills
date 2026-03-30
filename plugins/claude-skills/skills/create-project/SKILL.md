@@ -1,7 +1,8 @@
 ---
 name: create-project
 description: This skill should be used when the user asks to "create a project", "new project", "init project", "set up a project", "start a new project", "bootstrap project", or "initialize project". Creates a new project by setting up a git repo (or using an existing one) with an orphan meta branch containing structured planning files.
-version: 1.0.0
+version: 1.1.0
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git *), Bash(mkdir *), Bash(ls *), Bash(cat *), Bash(jq *), Bash(bash *)
 ---
 
 # Create Project

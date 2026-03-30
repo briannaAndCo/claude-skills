@@ -1,7 +1,8 @@
 ---
 name: create-stream
 description: This skill should be used when the user asks to "create a stream", "new stream", "add a stream", "add stream to project", "create a thread", or wants to add a new stream to an existing project. Creates a new stream on the project's meta branch with planning files and updates the streams table.
-version: 1.0.0
+version: 1.1.0
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git *), Bash(bash *), Bash(jq *)
 ---
 
 # Create Stream

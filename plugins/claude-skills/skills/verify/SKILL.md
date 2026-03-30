@@ -1,7 +1,8 @@
 ---
 name: verify
 description: This skill should be used when the user asks to "verify", "verify this", "verify the code", "review", "review this", "review the code", "review stream", "check the code", "look over this", "audit this", or mentions reviewing files, checking against acceptance criteria, or validating a stream's work before marking it complete.
-version: 2.0.0
+version: 2.1.0
+allowed-tools: Read, Glob, Grep, Bash(git *), Bash(cargo *), Bash(npm *), Bash(npx *), Bash(bash *)
 ---
 
 # Verify

@@ -1,7 +1,8 @@
 ---
 name: project-plan
 description: High-level project planning — architecture, use cases, workflows, design, and guiding principles. Called during project setup (after requirements) or invoked directly. Produces design.md on the meta branch with enforceable guiding principles that stream plans must adhere to.
-version: 1.0.0
+version: 1.1.0
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git *), Bash(bash *), WebSearch
 ---
 
 # Project Plan

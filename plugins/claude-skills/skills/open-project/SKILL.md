@@ -1,7 +1,8 @@
 ---
 name: open-project
 description: This skill should be used when the user asks to "open project", "open [project-name]", "show project", "show streams", "project status", "what's the status of [project]", "switch to project", or wants to see a project's streams and their status. Opens a project by displaying its objective, a streams table with status and descriptions, and lets the user open one or more streams (delegating to the `open-stream` skill).
-version: 1.0.0
+version: 1.1.0
+allowed-tools: Read, Glob, Grep, Bash(git *), Bash(bash *), Bash(jq *), Bash(tmux *), Bash(osascript *)
 ---
 
 # Open Project

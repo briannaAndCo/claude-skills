@@ -1,7 +1,8 @@
 ---
 name: open-stream
 description: This skill should be used when the user asks to "open a stream", "open stream X", "work on stream X", "start stream X", "open a thread", "launch stream", "switch to stream", or wants to open a specific project stream in its own terminal window with tmux context and worktree isolation. Opens a stream in a new terminal tab with a dedicated tmux session, git worktree (for code streams) or temporary docs directory (for non-code streams like research/planning), and a CLAUDE.md with full project and stream context.
-version: 2.0.0
+version: 2.1.0
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git *), Bash(bash *), Bash(jq *), Bash(tmux *), Bash(osascript *), Bash(sleep *)
 ---
 
 # Open Stream

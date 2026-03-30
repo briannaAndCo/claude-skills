@@ -1,7 +1,8 @@
 ---
 name: meta-sync
 description: This skill should be used when Claude needs to update the meta branch — logging sessions, updating stream status, recording hours, editing plans, or syncing project state. Also triggers when the user says "log session", "end session", "update status", "mark complete", "sync meta", or when any other skill needs to persist changes to the meta branch. Provides a safe worktree-based approach that never touches the user's working tree.
-version: 1.0.0
+version: 1.1.0
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git *), Bash(bash *), Bash(jq *)
 ---
 
 # Meta Sync
