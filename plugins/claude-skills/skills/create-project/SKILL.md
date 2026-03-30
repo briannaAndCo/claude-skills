@@ -153,7 +153,7 @@ git add streams/ 2>/dev/null || true
 git commit -m "meta: initialize project — <project-name>"
 ```
 
-Return to original branch or create main:
+Return to original branch or create main. **If this is a new repo** (no original branch), create an initial commit on main so that git worktrees can be created later when streams are opened:
 
 ```bash
 if [ -n "$ORIGINAL_BRANCH" ]; then
@@ -161,6 +161,10 @@ if [ -n "$ORIGINAL_BRANCH" ]; then
 else
   git checkout --orphan main
   git rm -rf --cached . 2>/dev/null || true
+  touch .gitkeep
+  echo '.worktrees' > .gitignore
+  git add .gitkeep .gitignore
+  git commit -m "chore: initial commit"
 fi
 ```
 
