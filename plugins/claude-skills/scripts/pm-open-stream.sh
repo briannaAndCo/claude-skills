@@ -102,7 +102,7 @@ WORKDIR=""
 
 if [ "$IS_CODE" = true ]; then
   RESULT=$(bash "$HELPER" setup-worktree "$REPO_DIR" "$STREAM")
-  WORKDIR=$(echo "$RESULT" | sed 's/^[a-z]*://')
+  WORKDIR=$(echo "$RESULT" | grep -E '^(created|reused):' | sed 's/^[a-z]*://')
   echo "setup:$WORKDIR"
 else
   WORKDIR="$HOME/.claude/stream-workspaces/$PROJECT/$STREAM"
