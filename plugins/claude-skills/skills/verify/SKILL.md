@@ -68,14 +68,23 @@ Look for:
 - Public API surface: are the right things public? Are internals leaking?
 - Test helper duplication across modules (same `setup()` written N times)
 
-### 2e. Reading Comprehension
+### 2e. Test Coverage Quality
+
+For every test file in the diff:
+
+- **Positive cases** — does each meaningful behavior have at least one test that asserts it works correctly?
+- **Negative cases** — does each meaningful behavior have at least one test for a failure or invalid-input path (bad input, not-found, permission denied, error propagation)?
+- **Trivial tests** — flag any test whose assertion would pass regardless of the feature's logic (e.g., `expect(service).toBeDefined()`, `expect(result).not.toBeNull()` with no meaningful setup, testing a constructor or framework wiring). These add noise and false confidence.
+- **Duplicate paths** — flag any two tests that exercise the exact same code path through the function under test. Different inputs that hit the same branch provide no additional signal; keep the one that best documents the invariant.
+
+### 2f. Reading Comprehension
 
 - Does the doc comment accurately describe what the function does?
 - Does the function name match its behavior?
 - Are comments that explain *why* present where the code is non-obvious?
 - Are there misleading comments (e.g. "idempotent-safe" on something that can't distinguish not-found from already-done)?
 
-### 2f. Guiding Principle Compliance
+### 2g. Guiding Principle Compliance
 
 If `design.md` exists with guiding principles, check each applicable GP against the code:
 

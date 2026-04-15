@@ -154,6 +154,9 @@ Front-load the concerns that review-stream's quality and correctness agents chec
 - What needs tests?
 - What kind of tests (unit, integration, end-to-end)?
 - What existing test patterns to follow?
+- For each testable behavior, plan **at least one positive case** (the happy path succeeds) and **at least one negative case** (invalid input, not-found, permission denied, error propagation).
+- Avoid trivial tests that exercise only the language or framework (e.g., "expect(service).toBeDefined()", testing that a variable was assigned, testing that a constructor runs). If the test would pass regardless of the feature's logic, it adds no value.
+- Avoid duplicate coverage: if two planned tests exercise the exact same code path through the function under test, collapse them into one. Different inputs that hit the same branch are redundant — keep only the test that best documents the invariant.
 
 Present the quality checklist to the user. **Walk through each category one at a time. Get confirmation.**
 
