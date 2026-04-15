@@ -13,18 +13,18 @@ Reviews code written this session against the stream's plan, acceptance criteria
 
 ## Step 1: Gather Context
 
-Read the stream plan and design from the meta branch:
+The meta branch lives in the **dedicated meta repo** (separate from the work repo where code was written). Read planning files from the meta repo:
 
 ```bash
-git show meta/<project-slug>:streams/<stream-name>/plan.md
-git show meta/<project-slug>:design.md 2>/dev/null || true
+git -C <meta-repo-path> show meta/<project-slug>:streams/<stream-name>/plan.md
+git -C <meta-repo-path> show meta/<project-slug>:design.md 2>/dev/null || true
 ```
 
-Find `<stream-name>` from the current branch name (e.g. `stream/<stream-name>`). If no stream context, ask the user: "What are the acceptance criteria or goals I should review against?"
+Find `<stream-name>` from the current branch name (e.g. `stream/<stream-name>`). Resolve `<meta-repo-path>` from `~/.claude/projects-registry.json` by matching the project slug. If no stream context, ask the user: "What are the acceptance criteria or goals I should review against?"
 
 From `design.md`, extract the guiding principles (GP-1 through GP-N). From the stream's `plan.md`, extract the principle compliance table and quality checklist.
 
-Also read:
+Read the diff from the work repo (current directory):
 
 ```bash
 git diff main..HEAD --name-only

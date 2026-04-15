@@ -59,7 +59,7 @@ git diff main..HEAD
 
 Also:
 
-- **Read the stream plan / acceptance criteria.** Check the branch name for a stream reference (e.g. `stream/<name>`) and read its plan: `git show meta/<project>:streams/<name>/plan.md`. If no stream plan exists, check for linked issues via branch name patterns (e.g. `feat/PROJ-123-description`).
+- **Read the stream plan / acceptance criteria.** Check the branch name for a stream reference (e.g. `stream/<name>`) and read its plan from the **meta repo** (separate from this work repo): `git -C <meta-repo-path> show meta/<project>:streams/<name>/plan.md`. Resolve `<meta-repo-path>` from `~/.claude/projects-registry.json`. If no stream plan exists, check for linked issues via branch name patterns (e.g. `feat/PROJ-123-description`).
 - **Detect PR template.** Check these locations in order, use the first found:
   - `.github/PULL_REQUEST_TEMPLATE.md`
   - `.github/pull_request_template.md`

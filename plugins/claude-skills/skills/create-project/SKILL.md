@@ -7,7 +7,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git *), Bash(mkdir *), Bash(l
 
 # Create Project
 
-Creates a new project — a git repo with an orphan `meta/<project-slug>` branch containing planning and tracking files. Code lives on main/feature branches; planning state lives on its own meta branch. Each project gets its own isolated meta branch, so multiple projects can coexist on the same repo.
+Creates a new project — an orphan `meta/<project-slug>` branch in a **dedicated project-tracking repo** (separate from all work repos) containing planning and tracking files. Code lives in work repos on feature branches; planning state lives in the meta repo. Multiple projects can coexist in the same meta repo via separate `meta/*` branches.
 
 ---
 
@@ -17,14 +17,15 @@ Creates a new project — a git repo with an orphan `meta/<project-slug>` branch
 
 Ask the user for:
 
-1. **Repo path** (required) — where the project lives on disk. Can be an existing repo or a new directory.
+1. **Meta repo path** (required) — path to the **dedicated project-tracking repo** where the meta branch will live. This must be a separate repo from the work repos (e.g., a `projects` or `meta-projects` repo). Can be an existing repo or a new directory.
 2. **Project name** (required) — human-readable name. Derive kebab-case slug from this for internal use.
 3. **Objective** (required) — one paragraph describing the project goal.
-4. **Initial streams** (optional) — list of streams to scaffold. For each stream ask:
+4. **Work repos** (optional) — which repos does this project span? Ask for names and local paths of any repos where actual code changes will happen. These are separate from the meta repo.
+5. **Initial streams** (optional) — list of streams to scaffold. For each stream ask:
    - Stream name (kebab-case)
    - Brief description
    - Blocked by (other stream names, if any)
-5. **GitHub repo URL** (optional) — remote URL for syncing the meta branch.
+6. **GitHub repo URL** (optional) — remote URL for syncing the meta branch.
 
 Ask these conversationally — don't dump a form. Start with repo path and name, then objective, then offer to add streams.
 
@@ -100,7 +101,10 @@ Use the Write tool to create `<repo-path>/project.json` — a machine-readable m
 {
   "name": "<project-name>",
   "created": "<YYYY-MM-DD>",
-  "repo": "<repo-url or empty string>",
+  "metaRepo": "<meta-repo-url or empty string>",
+  "workRepos": [
+    { "name": "<repo-name>", "path": "<absolute-path>" }
+  ],
   "objective": "<objective paragraph>",
   "streams": {}
 }
@@ -212,13 +216,14 @@ Tell the user:
 
 ## Important Notes
 
-- **Never commit planning files to main or feature branches.** They live exclusively on `meta/<project-slug>`.
+- **Meta branch always lives in the dedicated tracking repo** — never in a work repo. Work repos hold only code.
+- **Never commit planning files to main or feature branches.** They live exclusively on `meta/<project-slug>` in the meta repo.
 - **Never commit code to the meta branch.** It contains only planning/tracking files.
 - After returning to main/feature branch, the planning files won't be visible in the working tree — this is correct.
-- **Each project gets its own meta branch** — `meta/<project-slug>`. Multiple projects can coexist on the same repo.
-- If the repo already has a `meta/<project-slug>` branch with the same slug, warn the user and ask before overwriting.
+- **Each project gets its own meta branch** — `meta/<project-slug>`. Multiple projects can coexist on the same meta repo.
+- If the meta repo already has a `meta/<project-slug>` branch with the same slug, warn the user and ask before overwriting.
 - The meta branch is an orphan — it shares no history with code branches.
-- **Legacy `meta` branches** (without a project slug) should be migrated to `meta/<project-slug>` format. See the migration note below.
+- **Legacy `meta` branches** (without a project slug) should be migrated to `meta/<project-slug>` format.
 - Stream CLAUDE.md files are NOT created at project init. They are generated dynamically when a stream is opened.
 - **Use the Write tool for creating files, Edit tool for modifying files, and Read tool for reading files.** Only use Bash for git commands and directory creation.
 

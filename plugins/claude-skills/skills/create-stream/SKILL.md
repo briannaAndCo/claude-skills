@@ -150,6 +150,7 @@ If yes, invoke the `open-stream` skill with the project path and stream name.
 
 ## Important Notes
 
+- **All git operations in this skill target the meta repo** — the dedicated tracking repo where the meta branch lives. Never run these commands against a work repo.
 - **Use the Write tool for creating files, Edit tool for modifying files, Read tool for reading.** Only use Bash for git commands and directory creation.
 - Stream names must be kebab-case and unique within the project.
 - The description should be concise — it appears in the streams table Notes column and in the tmux status bar.

@@ -185,6 +185,7 @@ All skills that modify meta branch state should use `pm-meta-edit.sh`:
 
 ## Important Notes
 
+- **All operations target the meta repo** — the dedicated tracking repo (separate from all work repos). `<repo-path>` in script calls always refers to the meta repo path, never a work repo.
 - **Never checkout the meta branch in the user's working tree.** Always use the temporary worktree via `pm-meta-edit.sh`.
 - **The trap in pm-meta-edit.sh auto-cleans the worktree** even if the script fails. No orphaned worktrees.
 - **Concurrent edits are safe** — each invocation creates its own worktree. Git handles the merge on commit.

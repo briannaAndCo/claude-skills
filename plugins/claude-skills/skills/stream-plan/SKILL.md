@@ -19,10 +19,10 @@ Designs a stream at implementation level by exploring the codebase, surfacing qu
 
 ### Step 1: Read Context
 
-Use Bash to read planning state from meta:
+Read planning state from the **meta repo** (the dedicated tracking repo, separate from any work repos):
 
 ```bash
-cd <repo-path>
+cd <meta-repo-path>
 git show meta/<project-slug>:design.md
 git show meta/<project-slug>:requirements.md 2>/dev/null || true
 git show meta/<project-slug>:plan.md

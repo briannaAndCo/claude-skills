@@ -25,29 +25,21 @@ This prevents self-validation bias — the agent that implemented cannot also ju
 
 ### 1. Resolve the Stream
 
-Determine the project and stream to review. Prefer `project.json` for structured lookup:
+Determine the project and stream to review. Use the registry to find both the **meta repo path** (where planning files live) and the **work repo path** (where code lives). These are separate repos.
+
+Read planning files from the meta repo:
 
 ```bash
-git -C <repo-path> show <meta-branch>:project.json 2>/dev/null
+git -C <meta-repo-path> show <meta-branch>:project.json 2>/dev/null
+git -C <meta-repo-path> show <meta-branch>:streams/<stream>/plan.md
 ```
 
-Read the stream's plan from meta for AC reference:
+Identify the worktree and diff from the work repo:
 
 ```bash
-git -C <repo-path> show <meta-branch>:streams/<stream>/plan.md
-```
-
-If the stream has a worktree, identify it:
-
-```bash
-ls <repo-path>/.worktrees/<stream> 2>/dev/null
-```
-
-If the stream has a feature branch, identify the diff:
-
-```bash
-git -C <repo-path> diff main...stream/<stream> --stat
-git -C <repo-path> diff main...stream/<stream>
+ls <work-repo-path>/.worktrees/<stream> 2>/dev/null
+git -C <work-repo-path> diff main...stream/<stream> --stat
+git -C <work-repo-path> diff main...stream/<stream>
 ```
 
 ### 2. Launch Parallel Review Agents
