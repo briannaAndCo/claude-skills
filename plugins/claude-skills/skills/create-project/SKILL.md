@@ -226,6 +226,10 @@ Tell the user:
 - **Legacy `meta` branches** (without a project slug) should be migrated to `meta/<project-slug>` format.
 - Stream CLAUDE.md files are NOT created at project init. They are generated dynamically when a stream is opened.
 - **Use the Write tool for creating files, Edit tool for modifying files, and Read tool for reading files.** Only use Bash for git commands and directory creation.
+- **Files to never stage.** When operating in a work repo, never `git add` these paths — they are local-only and must not be committed or gitignored:
+  - `CLAUDE.md`, `claude_docs/`, `.worktrees/`, `doc/architecture.md`
+  - Git hook files (`.git/hooks/` — already untracked, but never copy them into the tree)
+  - If you must use `git add -A` or `git add .`, exclude them: `git add -A -- ':!CLAUDE.md' ':!claude_docs' ':!.worktrees' ':!doc/architecture.md'`
 
 ---
 

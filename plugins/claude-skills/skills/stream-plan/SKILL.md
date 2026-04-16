@@ -306,9 +306,14 @@ git push origin meta/<project-slug>
   - **Complex** (Opus): architecture decisions, cross-cutting refactors, design review, complex debugging
   This helps the implementer (human or agent) choose the right model per task, reducing cost on routine work and ensuring quality on complex work.
 - **Question oddities and side effects.** If something seems strange, inconsistent, or could have unintended consequences, flag it. Don't silently proceed past potential issues. Surface potential improvements and ask the user whether to include or defer them.
+- **No ticket numbers in code comments.** Do not reference ticket/issue numbers (e.g. AB#12345, JIRA-123) in source code comments. Ticket context belongs in commit messages, PR descriptions, and plan docs — not in comments, which outlive the ticket's relevance.
 - **Questions are asked one at a time.** Never batch multiple questions into a single message. Ask, wait, incorporate, then ask the next.
 - **Use the Write tool for creating files, Edit tool for modifying files, and Read tool for reading files.** Only use Bash for git commands and directory creation.
 - **If a principle needs amendment**, update `design.md` on meta before finalizing the stream plan. The principle set must be consistent across all streams.
+- **Files to never stage.** When operating in a work repo, never `git add` these paths — they are local-only and must not be committed or gitignored:
+  - `CLAUDE.md`, `claude_docs/`, `.worktrees/`, `doc/architecture.md`
+  - Git hook files (`.git/hooks/` — already untracked, but never copy them into the tree)
+  - If you must use `git add -A` or `git add .`, exclude them: `git add -A -- ':!CLAUDE.md' ':!claude_docs' ':!.worktrees' ':!doc/architecture.md'`
 
 ---
 

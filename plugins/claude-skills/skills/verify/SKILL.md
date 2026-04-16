@@ -34,6 +34,21 @@ Read every source file touched or created this session, plus corresponding test 
 
 ---
 
+## Step 1.5: Run Lint on Changed Files
+
+Before manual review, let the linter catch the mechanical issues. From the work repo:
+
+```bash
+LINT_BASE=$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD develop) \
+  ~/.claude/scripts/lint-changed.sh
+```
+
+If the script exits non-zero, capture its output as a **Critical** finding ("lint failures remain after auto-fix") and include the file/line summary. The script also auto-fixes formatting issues — if files were modified, re-read them before evaluating the dimensions below.
+
+If the script silently no-ops (no eslint/prettier in `package.json`, or no changed JS/TS files), continue without a finding.
+
+---
+
 ## Step 2: Review Dimensions
 
 For each file in the diff, evaluate across all five dimensions:
@@ -83,6 +98,7 @@ For every test file in the diff:
 - Does the function name match its behavior?
 - Are comments that explain *why* present where the code is non-obvious?
 - Are there misleading comments (e.g. "idempotent-safe" on something that can't distinguish not-found from already-done)?
+- **Flag ticket numbers in comments** — references like `AB#12345` or `JIRA-123` in source code comments should be flagged as Minor findings. Ticket context belongs in commit messages and PR descriptions, not in code.
 
 ### 2g. Guiding Principle Compliance
 

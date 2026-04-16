@@ -156,3 +156,7 @@ If yes, invoke the `open-stream` skill with the project path and stream name.
 - The description should be concise — it appears in the streams table Notes column and in the tmux status bar.
 - Always stash before switching to the meta branch and pop after returning.
 - If the user provides initial tasks or AC, include them in the stream plan.md instead of the placeholder text.
+- **Files to never stage.** When operating in a work repo, never `git add` these paths — they are local-only and must not be committed or gitignored:
+  - `CLAUDE.md`, `claude_docs/`, `.worktrees/`, `doc/architecture.md`
+  - Git hook files (`.git/hooks/` — already untracked, but never copy them into the tree)
+  - If you must use `git add -A` or `git add .`, exclude them: `git add -A -- ':!CLAUDE.md' ':!claude_docs' ':!.worktrees' ':!doc/architecture.md'`

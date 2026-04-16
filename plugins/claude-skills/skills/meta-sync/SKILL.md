@@ -190,3 +190,7 @@ All skills that modify meta branch state should use `pm-meta-edit.sh`:
 - **The trap in pm-meta-edit.sh auto-cleans the worktree** even if the script fails. No orphaned worktrees.
 - **Concurrent edits are safe** — each invocation creates its own worktree. Git handles the merge on commit.
 - **project.json and plan.md must stay in sync.** After editing plan.md directly, run `--sync-json`. The built-in `--set-status` updates both automatically.
+- **Files to never stage.** When operating in a work repo, never `git add` these paths — they are local-only and must not be committed or gitignored:
+  - `CLAUDE.md`, `claude_docs/`, `.worktrees/`, `doc/architecture.md`
+  - Git hook files (`.git/hooks/` — already untracked, but never copy them into the tree)
+  - If you must use `git add -A` or `git add .`, exclude them: `git add -A -- ':!CLAUDE.md' ':!claude_docs' ':!.worktrees' ':!doc/architecture.md'`

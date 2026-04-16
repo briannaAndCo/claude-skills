@@ -294,7 +294,7 @@ git worktree add /tmp/meta-work "$META_BRANCH"
 # Use Write/Edit tools to update files in /tmp/meta-work/
 
 cd /tmp/meta-work
-git add -A
+git add -A -- ':!CLAUDE.md' ':!claude_docs' ':!.worktrees' ':!doc/architecture.md'
 git commit -m "meta: update tracking — <brief description of what changed>"
 git push origin "$META_BRANCH"
 
@@ -325,3 +325,12 @@ git push origin --delete meta
 ```
 
 Then update `~/.claude/projects-registry.json` to set `"metaBranch": "meta/<project-slug>"` for that project.
+
+---
+
+## Important Notes
+
+- **Files to never stage.** When operating in a work repo, never `git add` these paths — they are local-only and must not be committed or gitignored:
+  - `CLAUDE.md`, `claude_docs/`, `.worktrees/`, `doc/architecture.md`
+  - Git hook files (`.git/hooks/` — already untracked, but never copy them into the tree)
+  - If you must use `git add -A` or `git add .`, exclude them: `git add -A -- ':!CLAUDE.md' ':!claude_docs' ':!.worktrees' ':!doc/architecture.md'`

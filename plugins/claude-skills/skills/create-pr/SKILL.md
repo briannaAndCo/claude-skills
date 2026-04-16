@@ -68,15 +68,21 @@ Also:
 
 ---
 
-## Step 3: Extract Ticket Number
+## Step 3: Extract Ticket Number and Verify Branch Name
 
 Look for a ticket/issue reference in:
 
-- The branch name (e.g. `PROJ-123`, `#45`, `GH-78`)
+- The branch name (e.g. `Task/24997-description`)
 - Commit messages
 - Stream plan metadata
 
-If found, include it in the title.
+**Branch naming convention:** Branches must follow `Task/<ticket-number>-<short-description>` (e.g. `Task/24997-correct-hazardous-weighout-equipment-type`). If the current branch does not follow this pattern and a ticket number is known, rename it before pushing:
+
+```bash
+git branch -m Task/<ticket>-<short-description>
+```
+
+Include the ticket number in the PR title.
 
 ---
 
@@ -84,16 +90,19 @@ If found, include it in the title.
 
 ### Title
 
-- Format: `[TICKET-123] Clear, human-readable description` (with ticket if found, omit brackets if none)
+- Format: `type(TICKET): short description` — conventional commit style with ticket number in parens
+- Use `fix` for bug fixes, `feat` for features, `refactor`, `test`, `chore` as appropriate
 - Plain English — someone scanning a PR list should instantly understand what this does
 - Under 70 characters
-- Examples: `[DATA-42] Add user session expiry to auth middleware`, `Fix race condition in batch processor`
+- Examples: `fix(24997): change hazardous weigh-out calibration from table scale to balance`, `feat(1234): add session expiry to auth middleware`
 
 ### Body
 
 Use the detected repo template if available. Otherwise use this format:
 
 ```markdown
+[AB#TICKET](https://dev.azure.com/bluechew/43b9d627-4b35-4ca4-aa5e-218bbbcd9461/_workitems/edit/TICKET)
+
 ## Summary
 - 1-3 concise bullet points: what this does and why
 
@@ -102,16 +111,16 @@ Use the detected repo template if available. Otherwise use this format:
 - [ ] Note any AC items deferred or partially done
 - (Omit section if no stream plan / AC exists)
 
-## Notable decisions
-- Call out anything unusual, non-standard, or surprising in the implementation
-- Workarounds, tech debt taken on, deviations from typical patterns
-- If nothing unusual, omit this section entirely
-
 ## Changes
-- Key changes organized by area, kept brief
+- High-level summary of impact areas — what parts of the system were touched and why, not a file-by-file list. Think: "what would a reviewer need to know to understand the scope?"
 
 ## Test plan
 - How to verify this works
+
+## Notes
+- Call out anything unusual, non-standard, or surprising
+- Workarounds, tech debt, deviations from typical patterns
+- Omit this section entirely if nothing notable
 ```
 
 **Writing style:** Be concise. No filler. Every line should earn its place. Reviewers should be able to skim the PR in 30 seconds and understand the scope and risk.
@@ -185,3 +194,8 @@ gh pr checks --watch --fail-fast
 - NEVER force-push without explicit user approval.
 - NEVER create the PR without showing the user the title and body first.
 - If the base branch is ambiguous, ask — don't guess.
+- **No ticket numbers in code comments.** If any uncommitted changes contain ticket references (e.g. `AB#12345`) in source code comments, flag them and ask the user to remove before pushing.
+- **Files to never stage.** When operating in a work repo, never `git add` these paths — they are local-only and must not be committed or gitignored:
+  - `CLAUDE.md`, `claude_docs/`, `.worktrees/`, `doc/architecture.md`
+  - Git hook files (`.git/hooks/` — already untracked, but never copy them into the tree)
+  - If you must use `git add -A` or `git add .`, exclude them: `git add -A -- ':!CLAUDE.md' ':!claude_docs' ':!.worktrees' ':!doc/architecture.md'`

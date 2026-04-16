@@ -301,6 +301,10 @@ git push origin meta/<project-slug>
 - **Users can add more context at any time.** If the user says "oh also..." or "I forgot to mention..." during any step, incorporate it and re-evaluate affected capabilities.
 - **Use the Write tool for creating files, Edit tool for modifying files, and Read tool for reading files.** Only use Bash for git commands and directory creation.
 - **Capability IDs (CAP-1, CAP-2, etc.) are referenced downstream.** Design.md maps capabilities to architecture components. Stream plans map to capabilities via the requirements mapping in plan.md.
+- **Files to never stage.** When operating in a work repo, never `git add` these paths — they are local-only and must not be committed or gitignored:
+  - `CLAUDE.md`, `claude_docs/`, `.worktrees/`, `doc/architecture.md`
+  - Git hook files (`.git/hooks/` — already untracked, but never copy them into the tree)
+  - If you must use `git add -A` or `git add .`, exclude them: `git add -A -- ':!CLAUDE.md' ':!claude_docs' ':!.worktrees' ':!doc/architecture.md'`
 
 ---
 

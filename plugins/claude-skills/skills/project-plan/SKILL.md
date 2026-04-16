@@ -269,6 +269,10 @@ git push origin meta/<project-slug>
 - **Principles are living.** If a stream plan reveals that a principle is wrong or too restrictive, update `design.md` on meta — don't silently ignore it.
 - **Use the Write tool for creating files, Edit tool for modifying files, and Read tool for reading files.** Only use Bash for git commands and directory creation.
 - **Keep principles language-agnostic.** Stack-specific guidance goes in "Stack notes" under each principle, not in the principle statement itself.
+- **Files to never stage.** When operating in a work repo, never `git add` these paths — they are local-only and must not be committed or gitignored:
+  - `CLAUDE.md`, `claude_docs/`, `.worktrees/`, `doc/architecture.md`
+  - Git hook files (`.git/hooks/` — already untracked, but never copy them into the tree)
+  - If you must use `git add -A` or `git add .`, exclude them: `git add -A -- ':!CLAUDE.md' ':!claude_docs' ':!.worktrees' ':!doc/architecture.md'`
 
 ---
 
