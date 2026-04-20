@@ -133,6 +133,18 @@ Do not clean up automatically — always ask first.
 
 ---
 
+## Worktree Layout
+
+Code stream worktrees are created alongside the main repo as a sibling directory:
+- Main repo: `~/repos/<repo-name>/`
+- Worktrees: `~/repos/<repo-name>-worktrees/<stream>/`
+
+Example: stream `auth-fix` on `meds-service` lives at `~/repos/meds-service-worktrees/auth-fix/`.
+
+`node_modules` is symlinked from the main repo automatically. Local bash scripts use `bash/local/worktree-env.sh` to resolve paths like `../keys/` regardless of whether they run from the main repo or a worktree.
+
+---
+
 ## Important Notes
 
 - **One script call does everything.** `pm-open-stream.sh` replaces all the individual step-by-step bash calls. No permission prompts needed beyond the single script invocation.
