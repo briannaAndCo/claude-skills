@@ -82,11 +82,13 @@ Look for:
 - Inconsistent error propagation (some paths propagate, others swallow)
 - Public API surface: are the right things public? Are internals leaking?
 - Test helper duplication across modules (same `setup()` written N times)
+- **Test variable naming** — use full descriptive names in spec files, not abbreviations (e.g. `gatedForm` not `gf`, `formBuilder` not `fb`). For test form fields, use `testField` or `fakeField` rather than generic names like `field`. Flag violations as Minor.
 
 ### 2e. Test Coverage Quality
 
 For every test file in the diff:
 
+- **Variable naming** — test files must use full, descriptive variable names. No abbreviations like `gf`, `fb`, `svc`. Use `gatedForm` for a `GatedForm` instance, `testField` or `fakeField` for test form fields. Match the name of the component or class being tested.
 - **Positive cases** — does each meaningful behavior have at least one test that asserts it works correctly?
 - **Negative cases** — does each meaningful behavior have at least one test for a failure or invalid-input path (bad input, not-found, permission denied, error propagation)?
 - **Trivial tests** — flag any test whose assertion would pass regardless of the feature's logic (e.g., `expect(service).toBeDefined()`, `expect(result).not.toBeNull()` with no meaningful setup, testing a constructor or framework wiring). These add noise and false confidence.
